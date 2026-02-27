@@ -1,0 +1,1306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CYBERWAR // BATTLE REPLAY</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Exo+2:wght@300;400;600;800&display=swap');
+
+  :root {
+    --bg:         #050a0e;
+    --bg2:        #081218;
+    --bg3:        #0a1820;
+    --panel:      #0d1f2d;
+    --border:     #1a3a50;
+    --amber:      #f5a623;
+    --amber-dim:  #7a5012;
+    --red:        #ff2d55;
+    --red-dim:    #5a0018;
+    --blue:       #00d4ff;
+    --blue-dim:   #004466;
+    --green:      #00ff88;
+    --green-dim:  #004422;
+    --gray:       #4a7090;
+    --text:       #c8dfe8;
+    --text-dim:   #4a6a7a;
+    --mono:       'Share Tech Mono', monospace;
+    --sans:       'Exo 2', sans-serif;
+    --glow-red:   0 0 12px #ff2d5566, 0 0 30px #ff2d5522;
+    --glow-blue:  0 0 12px #00d4ff66, 0 0 30px #00d4ff22;
+    --glow-amber: 0 0 8px #f5a62344;
+    --scanline-size: 3px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    min-height: 100vh;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* Scanline overlay */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent calc(var(--scanline-size) - 1px),
+      rgba(0,0,0,0.18) var(--scanline-size)
+    );
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  /* Noise texture */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 9998;
+    opacity: 0.6;
+  }
+
+  /* ─── Layout ─── */
+  .app {
+    display: grid;
+    grid-template-rows: 52px 1fr 90px;
+    grid-template-columns: 1fr 320px;
+    height: 100vh;
+    gap: 0;
+  }
+
+  /* ─── Header ─── */
+  header {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    gap: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+  header::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, var(--red-dim)22 0%, transparent 30%, transparent 70%, var(--blue-dim)22 100%);
+  }
+
+  .logo {
+    font-family: var(--sans);
+    font-weight: 800;
+    font-size: 15px;
+    letter-spacing: 4px;
+    color: var(--amber);
+    text-shadow: var(--glow-amber);
+    text-transform: uppercase;
+  }
+  .logo span { color: var(--text-dim); font-weight: 300; }
+
+  .header-divider { width: 1px; height: 24px; background: var(--border); }
+
+  .scenario-label {
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+  }
+  .scenario-name {
+    font-family: var(--sans);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    margin-left: 8px;
+  }
+
+  .header-spacer { flex: 1; }
+
+  .winner-badge {
+    font-family: var(--sans);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 3px;
+    padding: 4px 14px;
+    border-radius: 2px;
+    text-transform: uppercase;
+  }
+  .winner-badge.red  { background: var(--red-dim); color: var(--red); border: 1px solid var(--red); box-shadow: var(--glow-red); }
+  .winner-badge.blue { background: var(--blue-dim); color: var(--blue); border: 1px solid var(--blue); box-shadow: var(--glow-blue); }
+
+  .status-indicators {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+  }
+  .status-dot {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+    letter-spacing: 1px;
+    color: var(--text-dim);
+  }
+  .status-dot::before {
+    content: '●';
+    font-size: 8px;
+    animation: blink 1.4s ease-in-out infinite;
+  }
+  .status-dot.live::before { color: var(--green); }
+  .status-dot.replay::before { color: var(--amber); animation: none; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+  /* ─── Main canvas ─── */
+  .canvas-area {
+    position: relative;
+    overflow: hidden;
+    background: var(--bg);
+  }
+
+  /* Corner decorations */
+  .corner { position: absolute; width: 24px; height: 24px; z-index: 10; }
+  .corner-tl { top: 12px; left: 12px; border-top: 1px solid var(--border); border-left: 1px solid var(--border); }
+  .corner-tr { top: 12px; right: 12px; border-top: 1px solid var(--border); border-right: 1px solid var(--border); }
+  .corner-bl { bottom: 12px; left: 12px; border-bottom: 1px solid var(--border); border-left: 1px solid var(--border); }
+  .corner-br { bottom: 12px; right: 12px; border-bottom: 1px solid var(--border); border-right: 1px solid var(--border); }
+
+  #network-canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  /* Node tooltip */
+  .node-tooltip {
+    position: absolute;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    padding: 10px 14px;
+    font-size: 11px;
+    line-height: 1.8;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+    max-width: 220px;
+    z-index: 100;
+    box-shadow: 0 4px 24px #00000088;
+  }
+  .node-tooltip.visible { opacity: 1; }
+  .tooltip-title {
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 6px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+  .tooltip-row { display: flex; justify-content: space-between; gap: 12px; }
+  .tooltip-key { color: var(--text-dim); }
+  .tooltip-val { color: var(--amber); }
+  .tooltip-val.red { color: var(--red); }
+  .tooltip-val.blue { color: var(--blue); }
+  .tooltip-val.green { color: var(--green); }
+
+  /* ─── Right panel ─── */
+  .side-panel {
+    background: var(--bg2);
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .panel-section {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .panel-section-title {
+    font-size: 9px;
+    letter-spacing: 3px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .panel-section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* Score display */
+  .scores {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .score-card {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    padding: 10px;
+    text-align: center;
+  }
+  .score-team {
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .score-team.red { color: var(--red); }
+  .score-team.blue { color: var(--blue); }
+  .score-val {
+    font-family: var(--sans);
+    font-size: 26px;
+    font-weight: 800;
+    line-height: 1;
+  }
+  .score-val.red { color: var(--red); text-shadow: var(--glow-red); }
+  .score-val.blue { color: var(--blue); text-shadow: var(--glow-blue); }
+
+  /* Mini chart */
+  #score-chart {
+    width: 100%;
+    height: 70px;
+    margin-top: 10px;
+  }
+
+  /* Action log */
+  .action-log {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px 0;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+  .log-entry {
+    padding: 6px 16px;
+    font-size: 10px;
+    line-height: 1.6;
+    border-left: 2px solid transparent;
+    transition: background 0.2s;
+    cursor: pointer;
+  }
+  .log-entry:hover { background: var(--bg3); }
+  .log-entry.active { background: var(--bg3); border-left-color: var(--amber); }
+  .log-entry.current-turn { background: #1a2a3a; }
+  .log-turn {
+    font-size: 9px;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+  }
+  .log-red { color: var(--red); }
+  .log-blue { color: var(--blue); }
+  .log-alert { color: var(--amber); font-size: 9px; margin-top: 2px; }
+  .log-status-success { color: var(--green); font-size: 9px; }
+  .log-status-failure { color: var(--red-dim); filter: brightness(2); font-size: 9px; }
+  .log-status-detected { color: var(--amber); font-size: 9px; }
+
+  /* Node status grid */
+  .node-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 5px;
+  }
+  .node-chip {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    padding: 5px 6px;
+    font-size: 9px;
+    cursor: pointer;
+    transition: all 0.15s;
+    position: relative;
+    overflow: hidden;
+  }
+  .node-chip:hover { border-color: var(--amber); }
+  .node-chip.compromised { border-color: var(--red); }
+  .node-chip.isolated { border-color: var(--gray); opacity: 0.6; }
+  .node-chip.honeypot { border-color: var(--amber); }
+  .node-chip-name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--text-dim);
+    font-size: 8px;
+    letter-spacing: 0.5px;
+  }
+  .node-chip-owner {
+    font-family: var(--sans);
+    font-size: 10px;
+    font-weight: 600;
+    margin-top: 2px;
+  }
+  .node-chip-owner.red { color: var(--red); }
+  .node-chip-owner.blue { color: var(--blue); }
+  .node-chip-owner.neutral { color: var(--text-dim); }
+
+  /* Exfil bar */
+  .exfil-bar {
+    position: absolute;
+    bottom: 0; left: 0;
+    height: 2px;
+    background: var(--red);
+    transition: width 0.3s;
+    box-shadow: 0 0 4px var(--red);
+  }
+
+  /* ─── Timeline scrubber ─── */
+  .timeline {
+    grid-column: 1 / -1;
+    background: var(--bg2);
+    border-top: 1px solid var(--border);
+    padding: 0 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .playback-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .ctrl-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text);
+    width: 32px;
+    height: 32px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    transition: all 0.15s;
+    font-family: var(--mono);
+  }
+  .ctrl-btn:hover { border-color: var(--amber); color: var(--amber); }
+  .ctrl-btn.active { background: var(--amber-dim); border-color: var(--amber); color: var(--amber); }
+
+  .turn-counter {
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--amber);
+    width: 70px;
+    text-align: center;
+    flex-shrink: 0;
+    letter-spacing: 1px;
+  }
+
+  .scrubber-track {
+    flex: 1;
+    position: relative;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+  }
+
+  .scrubber-bg {
+    position: absolute;
+    left: 0; right: 0;
+    height: 4px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+  }
+
+  .scrubber-fill {
+    position: absolute;
+    left: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--blue), var(--amber));
+    transition: width 0.1s;
+  }
+
+  .scrubber-handle {
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    background: var(--amber);
+    border: 2px solid var(--bg);
+    box-shadow: var(--glow-amber);
+    transform: translateX(-50%);
+    transition: left 0.1s;
+    z-index: 5;
+  }
+
+  /* Turn markers */
+  .turn-marker {
+    position: absolute;
+    width: 2px;
+    height: 8px;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    transition: background 0.2s;
+  }
+  .turn-marker.red-action { background: var(--red); }
+  .turn-marker.blue-action { background: var(--blue); }
+  .turn-marker.alert { background: var(--amber); }
+
+  .speed-control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  .speed-label { font-size: 9px; color: var(--text-dim); letter-spacing: 1px; }
+  .speed-select {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 4px 8px;
+    cursor: pointer;
+  }
+
+  /* ─── Animated elements ─── */
+  .pulse-ring {
+    animation: pulse-ring 1.5s ease-out infinite;
+  }
+  @keyframes pulse-ring {
+    0% { r: 20; opacity: 0.8; }
+    100% { r: 40; opacity: 0; }
+  }
+
+  /* Active action flash */
+  @keyframes flash-in {
+    0% { opacity: 0; transform: scale(0.8); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+
+  .action-flash { animation: flash-in 0.3s ease-out; }
+
+  /* CRT flicker */
+  @keyframes crt-flicker {
+    0%, 100% { opacity: 1; }
+    97% { opacity: 1; }
+    98% { opacity: 0.92; }
+    99% { opacity: 1; }
+  }
+  .canvas-area { animation: crt-flicker 8s ease-in-out infinite; }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- Header -->
+  <header>
+    <div class="logo">Cyber<span>War</span> //</div>
+    <div class="header-divider"></div>
+    <span class="scenario-label">SCENARIO</span>
+    <span class="scenario-name" id="scenario-name">Loading...</span>
+    <div class="header-spacer"></div>
+    <div class="status-indicators">
+      <div class="status-dot replay">REPLAY MODE</div>
+    </div>
+    <div class="header-divider"></div>
+    <div id="winner-badge" class="winner-badge">—</div>
+  </header>
+
+  <!-- Canvas -->
+  <div class="canvas-area" id="canvas-area">
+    <div class="corner corner-tl"></div>
+    <div class="corner corner-tr"></div>
+    <div class="corner corner-bl"></div>
+    <div class="corner corner-br"></div>
+    <svg id="network-canvas"></svg>
+    <div class="node-tooltip" id="tooltip"></div>
+  </div>
+
+  <!-- Right Panel -->
+  <div class="side-panel">
+
+    <div class="panel-section">
+      <div class="panel-section-title">Score</div>
+      <div class="scores">
+        <div class="score-card">
+          <div class="score-team red">🔴 RED</div>
+          <div class="score-val red" id="red-score">0.0</div>
+        </div>
+        <div class="score-card">
+          <div class="score-team blue">🔵 BLUE</div>
+          <div class="score-val blue" id="blue-score">0.0</div>
+        </div>
+      </div>
+      <svg id="score-chart"></svg>
+    </div>
+
+    <div class="panel-section" style="flex-shrink:0">
+      <div class="panel-section-title">Node Status</div>
+      <div class="node-grid" id="node-grid"></div>
+    </div>
+
+    <div class="panel-section" style="flex:1;overflow:hidden;display:flex;flex-direction:column;padding-bottom:0">
+      <div class="panel-section-title" style="flex-shrink:0">Tactical Log</div>
+      <div class="action-log" id="action-log"></div>
+    </div>
+  </div>
+
+  <!-- Timeline -->
+  <div class="timeline">
+    <div class="playback-controls">
+      <button class="ctrl-btn" id="btn-prev" title="Prev turn">◀</button>
+      <button class="ctrl-btn" id="btn-play" title="Play/Pause">▶</button>
+      <button class="ctrl-btn" id="btn-next" title="Next turn">▶▶</button>
+      <button class="ctrl-btn" id="btn-reset" title="Reset">⟳</button>
+    </div>
+
+    <div class="turn-counter" id="turn-counter">T 00 / 00</div>
+
+    <div class="scrubber-track" id="scrubber-track">
+      <div class="scrubber-bg"></div>
+      <div class="scrubber-fill" id="scrubber-fill" style="width:0%"></div>
+      <div class="scrubber-handle" id="scrubber-handle" style="left:0%"></div>
+      <div id="turn-markers"></div>
+    </div>
+
+    <div class="speed-control">
+      <span class="speed-label">SPEED</span>
+      <select class="speed-select" id="speed-select">
+        <option value="1500">0.5×</option>
+        <option value="900" selected>1×</option>
+        <option value="400">2×</option>
+        <option value="150">5×</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════
+//  GAME DATA — embedded JSON
+// ══════════════════════════════════════════════════════
+const GAME_DATA = {"scenario":"Corporate Network","winner":"blue","total_turns":20,"nodes":[{"id":"internet","label":"Internet","type":"router","value":0,"services":["http:80/UP"],"vulnerabilities":[]},{"id":"dmz_web","label":"DMZ Web Server","type":"dmz","value":3,"services":["http:80/UP","https:443/UP","ssh:22/UP"],"vulnerabilities":[{"cve":"CVE-2021-44228","cvss":10.0},{"cve":"CVE-2022-1388","cvss":9.8}]},{"id":"dmz_mail","label":"DMZ Mail Server","type":"dmz","value":2,"services":["smtp:25/UP","imap:143/UP"],"vulnerabilities":[{"cve":"CVE-2021-34527","cvss":8.8}]},{"id":"fw_internal","label":"Internal Firewall","type":"firewall","value":4,"services":[],"vulnerabilities":[{"cve":"CVE-2022-0778","cvss":7.5}]},{"id":"workstation1","label":"HR Workstation","type":"workstation","value":2,"services":["rdp:3389/UP","smb:445/UP"],"vulnerabilities":[{"cve":"CVE-2017-0144","cvss":9.3}]},{"id":"workstation2","label":"Dev Workstation","type":"workstation","value":3,"services":["ssh:22/UP","http:8080/UP"],"vulnerabilities":[{"cve":"CVE-2021-3156","cvss":7.8}]},{"id":"db_server","label":"Database Server","type":"database","value":8,"services":["mysql:3306/UP","ssh:22/UP"],"vulnerabilities":[{"cve":"CVE-2022-21699","cvss":8.0}]},{"id":"file_server","label":"File Server","type":"server","value":5,"services":["smb:445/UP","ftp:21/UP"],"vulnerabilities":[{"cve":"CVE-2021-26084","cvss":9.8}]},{"id":"ad_server","label":"Active Directory","type":"server","value":10,"services":["ldap:389/UP","kerberos:88/UP"],"vulnerabilities":[{"cve":"CVE-2021-42278","cvss":8.8},{"cve":"CVE-2020-1472","cvss":10.0}]}],"edges":[{"source":"internet","target":"dmz_web","monitored":false},{"source":"internet","target":"dmz_mail","monitored":false},{"source":"dmz_web","target":"fw_internal","monitored":false},{"source":"dmz_mail","target":"fw_internal","monitored":false},{"source":"fw_internal","target":"workstation1","monitored":true},{"source":"fw_internal","target":"workstation2","monitored":false},{"source":"fw_internal","target":"db_server","monitored":true},{"source":"fw_internal","target":"file_server","monitored":false},{"source":"workstation1","target":"db_server","monitored":false},{"source":"workstation2","target":"db_server","monitored":false},{"source":"workstation2","target":"ad_server","monitored":false},{"source":"db_server","target":"ad_server","monitored":false},{"source":"file_server","target":"ad_server","monitored":false}],"history":[{"turn":1,"red_action_type":"exploit","red_target":"dmz_web","red_status":"success","red_msg":"Exploited CVE-2021-44228 on dmz_web (roll=0.20).","red_reward":3.0,"blue_action_type":"restore","blue_target":"internet","blue_status":"success","blue_msg":"Node internet restored from clean backup.","blue_reward":0.0,"red_score":3.0,"blue_score":34.0,"alerts":[]},{"turn":2,"red_action_type":"exploit","red_target":"dmz_mail","red_status":"success","red_msg":"Exploited CVE-2021-34527 on dmz_mail (roll=0.25).","red_reward":2.0,"blue_action_type":"restore","blue_target":"dmz_web","blue_status":"success","blue_msg":"Node dmz_web restored from clean backup.","blue_reward":3.6,"red_score":2.0,"blue_score":35.0,"alerts":[]},{"turn":3,"red_action_type":"exploit","red_target":"dmz_web","red_status":"success","red_msg":"Exploited CVE-2021-44228 on dmz_web (roll=0.25).","red_reward":3.0,"blue_action_type":"isolate","blue_target":"dmz_mail","blue_status":"success","blue_msg":"Node dmz_mail isolated from network.","blue_reward":1.0,"red_score":5.0,"blue_score":32.0,"alerts":[]},{"turn":4,"red_action_type":"scan","red_target":"dmz_web","red_status":"success","red_msg":"Scanned dmz_web: found 1 vulns.","red_reward":0.2,"blue_action_type":"restore","blue_target":"dmz_web","blue_status":"success","blue_msg":"Node dmz_web restored from clean backup.","blue_reward":3.6,"red_score":2.0,"blue_score":35.0,"alerts":[]},{"turn":5,"red_action_type":"exploit","red_target":"dmz_web","red_status":"success","red_msg":"Exploited CVE-2021-44228 on dmz_web (roll=0.54).","red_reward":3.0,"blue_action_type":"isolate","blue_target":"dmz_mail","blue_status":"failure","blue_msg":"dmz_mail already isolated.","blue_reward":0.0,"red_score":5.0,"blue_score":32.0,"alerts":[]},{"turn":6,"red_action_type":"scan","red_target":"dmz_mail","red_status":"failure","red_msg":"Node dmz_mail is isolated \u2014 unreachable.","red_reward":-0.1,"blue_action_type":"isolate","blue_target":"dmz_web","blue_status":"success","blue_msg":"Node dmz_web isolated from network.","blue_reward":1.0,"red_score":5.0,"blue_score":32.0,"alerts":[]},{"turn":7,"red_action_type":"scan","red_target":"fw_internal","red_status":"success","red_msg":"Scanned fw_internal: found 1 vulns.","red_reward":0.2,"blue_action_type":"restore","blue_target":"dmz_web","blue_status":"success","blue_msg":"Node dmz_web restored from clean backup.","blue_reward":3.6,"red_score":2.0,"blue_score":35.0,"alerts":[]},{"turn":8,"red_action_type":"exploit","red_target":"dmz_web","red_status":"success","red_msg":"Exploited CVE-2021-44228 on dmz_web (roll=0.61).","red_reward":3.0,"blue_action_type":"restore","blue_target":"dmz_mail","blue_status":"success","blue_msg":"Node dmz_mail restored from clean backup.","blue_reward":2.4,"red_score":3.0,"blue_score":34.0,"alerts":[]},{"turn":9,"red_action_type":"exploit","red_target":"dmz_mail","red_status":"failure","red_msg":"Exploit failed on dmz_mail (roll=0.90, need<0.88).","red_reward":-0.2,"blue_action_type":"restore","blue_target":"dmz_web","blue_status":"success","blue_msg":"Node dmz_web restored from clean backup.","blue_reward":3.6,"red_score":0.0,"blue_score":37.0,"alerts":[]},{"turn":10,"red_action_type":"exploit","red_target":"dmz_web","red_status":"success","red_msg":"Exploited CVE-2021-44228 on dmz_web (roll=0.39).","red_reward":3.0,"blue_action_type":"patch","blue_target":"dmz_web","blue_status":"success","blue_msg":"Patched CVE-2021-44228 on dmz_web.","blue_reward":0.5,"red_score":3.0,"blue_score":34.0,"alerts":[]},{"turn":11,"red_action_type":"exploit","red_target":"dmz_mail","red_status":"success","red_msg":"Exploited CVE-2021-34527 on dmz_mail (roll=0.15).","red_reward":2.0,"blue_action_type":"isolate","blue_target":"dmz_web","blue_status":"success","blue_msg":"Node dmz_web isolated from network.","blue_reward":1.0,"red_score":5.0,"blue_score":32.0,"alerts":[]},{"turn":12,"red_action_type":"lateral_move","red_target":"fw_internal","red_status":"success","red_msg":"Laterally moved from dmz_web to fw_internal.","red_reward":3.2,"blue_action_type":"isolate","blue_target":"dmz_web","blue_status":"failure","blue_msg":"dmz_web already isolated.","blue_reward":0.0,"red_score":9.0,"blue_score":28.0,"alerts":[]},{"turn":13,"red_action_type":"scan","red_target":"workstation1","red_status":"success","red_msg":"Scanned workstation1: found 1 vulns.","red_reward":0.2,"blue_action_type":"restore","blue_target":"dmz_web","blue_status":"success","blue_msg":"Node dmz_web restored from clean backup.","blue_reward":3.6,"red_score":6.0,"blue_score":31.0,"alerts":[]},{"turn":14,"red_action_type":"exploit","red_target":"dmz_web","red_status":"success","red_msg":"Exploited CVE-2021-44228 on dmz_web (roll=0.53).","red_reward":3.0,"blue_action_type":"isolate","blue_target":"dmz_mail","blue_status":"success","blue_msg":"Node dmz_mail isolated from network.","blue_reward":1.0,"red_score":9.0,"blue_score":28.0,"alerts":[]},{"turn":15,"red_action_type":"scan","red_target":"workstation2","red_status":"success","red_msg":"Scanned workstation2: found 1 vulns.","red_reward":0.2,"blue_action_type":"isolate","blue_target":"dmz_web","blue_status":"success","blue_msg":"Node dmz_web isolated from network.","blue_reward":1.0,"red_score":9.0,"blue_score":28.0,"alerts":[]},{"turn":16,"red_action_type":"scan","red_target":"db_server","red_status":"success","red_msg":"Scanned db_server: found 1 vulns.","red_reward":0.2,"blue_action_type":"restore","blue_target":"dmz_web","blue_status":"success","blue_msg":"Node dmz_web restored from clean backup.","blue_reward":3.6,"red_score":6.0,"blue_score":31.0,"alerts":[]},{"turn":17,"red_action_type":"exploit","red_target":"dmz_web","red_status":"success","red_msg":"Exploited CVE-2021-44228 on dmz_web (roll=0.27).","red_reward":3.0,"blue_action_type":"restore","blue_target":"dmz_mail","blue_status":"success","blue_msg":"Node dmz_mail restored from clean backup.","blue_reward":2.4,"red_score":7.0,"blue_score":30.0,"alerts":[]},{"turn":18,"red_action_type":"exploit","red_target":"dmz_mail","red_status":"success","red_msg":"Exploited CVE-2021-34527 on dmz_mail (roll=0.20).","red_reward":2.0,"blue_action_type":"restore","blue_target":"dmz_web","blue_status":"success","blue_msg":"Node dmz_web restored from clean backup.","blue_reward":3.6,"red_score":6.0,"blue_score":31.0,"alerts":[]},{"turn":19,"red_action_type":"exploit","red_target":"dmz_web","red_status":"success","red_msg":"Exploited CVE-2021-44228 on dmz_web (roll=0.53).","red_reward":3.0,"blue_action_type":"isolate","blue_target":"dmz_mail","blue_status":"success","blue_msg":"Node dmz_mail isolated from network.","blue_reward":1.0,"red_score":9.0,"blue_score":28.0,"alerts":[]},{"turn":20,"red_action_type":"scan","red_target":"file_server","red_status":"success","red_msg":"Scanned file_server: found 1 vulns.","red_reward":0.2,"blue_action_type":"restore","blue_target":"dmz_web","blue_status":"success","blue_msg":"Node dmz_web restored from clean backup.","blue_reward":3.6,"red_score":6.0,"blue_score":31.0,"alerts":[]}],"snapshots":[{"internet":{"owner":"red","compromised":true,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"dmz_web":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"dmz_mail":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"fw_internal":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"workstation1":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"workstation2":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"db_server":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"file_server":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"ad_server":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":1,"honeypot":false}},{"internet":{"owner":"blue","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"dmz_web":{"owner":"red","compromised":true,"isolated":false,"alert_level":20,"data_exfil":0.0,"patch_level":0,"honeypot":false},"dmz_mail":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"fw_internal":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"workstation1":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"workstation2":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"db_server":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"file_server":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"ad_server":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":1,"honeypot":false}},{"internet":{"owner":"blue","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"dmz_web":{"owner":"blue","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"dmz_mail":{"owner":"red","compromised":true,"isolated":false,"alert_level":20,"data_exfil":0.0,"patch_level":0,"honeypot":false},"fw_internal":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"workstation1":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"workstation2":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"db_server":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"file_server":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"ad_server":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":1,"honeypot":false}},{"internet":{"owner":"blue","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"dmz_web":{"owner":"red","compromised":true,"isolated":false,"alert_level":20,"data_exfil":0.0,"patch_level":0,"honeypot":false},"dmz_mail":{"owner":"red","compromised":true,"isolated":true,"alert_level":20,"data_exfil":0.0,"patch_level":0,"honeypot":false},"fw_internal":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"workstation1":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"workstation2":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"db_server":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"file_server":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"ad_server":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":1,"honeypot":false}},{"internet":{"owner":"blue","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"dmz_web":{"owner":"blue","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"dmz_mail":{"owner":"red","compromised":true,"isolated":true,"alert_level":20,"data_exfil":0.0,"patch_level":0,"honeypot":false},"fw_internal":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"workstation1":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"workstation2":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"db_server":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"file_server":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"ad_server":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":1,"honeypot":false}},{"internet":{"owner":"blue","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"dmz_web":{"owner":"red","compromised":true,"isolated":false,"alert_level":20,"data_exfil":0.0,"patch_level":0,"honeypot":false},"dmz_mail":{"owner":"red","compromised":true,"isolated":true,"alert_level":20,"data_exfil":0.0,"patch_level":0,"honeypot":false},"fw_internal":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"workstation1":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"workstation2":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"db_server":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"file_server":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"ad_server":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":1,"honeypot":false}},{"internet":{"owner":"blue","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"dmz_web":{"owner":"red","compromised":true,"isolated":true,"alert_level":20,"data_exfil":0.0,"patch_level":0,"honeypot":false},"dmz_mail":{"owner":"red","compromised":true,"isolated":true,"alert_level":20,"data_exfil":0.0,"patch_level":0,"honeypot":false},"fw_internal":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"workstation1":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"workstation2":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"db_server":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"file_server":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"ad_server":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":1,"honeypot":false}},{"internet":{"owner":"blue","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"dmz_web":{"owner":"blue","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"dmz_mail":{"owner":"red","compromised":true,"isolated":true,"alert_level":20,"data_exfil":0.0,"patch_level":0,"honeypot":false},"fw_internal":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":2,"data_exfil":0.0,"patch_level":0,"honeypot":false},"workstation1":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"workstation2":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"db_server":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"file_server":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"ad_server":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":1,"honeypot":false}},{"internet":{"owner":"blue","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"dmz_web":{"owner":"red","compromised":true,"isolated":false,"alert_level":20,"data_exfil":0.0,"patch_level":0,"honeypot":false},"dmz_mail":{"owner":"blue","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"fw_internal":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":2,"data_exfil":0.0,"patch_level":0,"honeypot":false},"workstation1":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"workstation2":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"db_server":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"file_server":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"ad_server":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":1,"honeypot":false}},{"internet":{"owner":"blue","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"dmz_web":{"owner":"blue","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"dmz_mail":{"owner":"blue","compromised":false,"isolated":false,"alert_level":10,"data_exfil":0.0,"patch_level":0,"honeypot":false},"fw_internal":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":2,"data_exfil":0.0,"patch_level":0,"honeypot":false},"workstation1":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"workstation2":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"db_server":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"file_server":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"ad_server":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":1,"honeypot":false}},{"internet":{"owner":"blue","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"dmz_web":{"owner":"red","compromised":true,"isolated":false,"alert_level":20,"data_exfil":0.0,"patch_level":0,"honeypot":false},"dmz_mail":{"owner":"blue","compromised":false,"isolated":false,"alert_level":10,"data_exfil":0.0,"patch_level":0,"honeypot":false},"fw_internal":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":2,"data_exfil":0.0,"patch_level":0,"honeypot":false},"workstation1":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"workstation2":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"db_server":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"file_server":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"ad_server":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":1,"honeypot":false}},{"internet":{"owner":"blue","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"dmz_web":{"owner":"red","compromised":true,"isolated":true,"alert_level":20,"data_exfil":0.0,"patch_level":0,"honeypot":false},"dmz_mail":{"owner":"red","compromised":true,"isolated":false,"alert_level":30,"data_exfil":0.0,"patch_level":0,"honeypot":false},"fw_internal":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":2,"data_exfil":0.0,"patch_level":0,"honeypot":false},"workstation1":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"workstation2":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"db_server":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"file_server":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"ad_server":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":1,"honeypot":false}},{"internet":{"owner":"blue","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"dmz_web":{"owner":"red","compromised":true,"isolated":true,"alert_level":20,"data_exfil":0.0,"patch_level":0,"honeypot":false},"dmz_mail":{"owner":"red","compromised":true,"isolated":false,"alert_level":30,"data_exfil":0.0,"patch_level":0,"honeypot":false},"fw_internal":{"owner":"red","compromised":true,"isolated":false,"alert_level":10,"data_exfil":0.0,"patch_level":0,"honeypot":false},"workstation1":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"workstation2":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"db_server":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"file_server":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"ad_server":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":1,"honeypot":false}},{"internet":{"owner":"blue","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"dmz_web":{"owner":"blue","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"dmz_mail":{"owner":"red","compromised":true,"isolated":false,"alert_level":30,"data_exfil":0.0,"patch_level":0,"honeypot":false},"fw_internal":{"owner":"red","compromised":true,"isolated":false,"alert_level":10,"data_exfil":0.0,"patch_level":0,"honeypot":false},"workstation1":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":2,"data_exfil":0.0,"patch_level":0,"honeypot":false},"workstation2":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"db_server":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"file_server":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"ad_server":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":1,"honeypot":false}},{"internet":{"owner":"blue","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"dmz_web":{"owner":"red","compromised":true,"isolated":false,"alert_level":20,"data_exfil":0.0,"patch_level":0,"honeypot":false},"dmz_mail":{"owner":"red","compromised":true,"isolated":true,"alert_level":30,"data_exfil":0.0,"patch_level":0,"honeypot":false},"fw_internal":{"owner":"red","compromised":true,"isolated":false,"alert_level":10,"data_exfil":0.0,"patch_level":0,"honeypot":false},"workstation1":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":2,"data_exfil":0.0,"patch_level":0,"honeypot":false},"workstation2":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"db_server":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"file_server":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"ad_server":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":1,"honeypot":false}},{"internet":{"owner":"blue","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"dmz_web":{"owner":"red","compromised":true,"isolated":true,"alert_level":20,"data_exfil":0.0,"patch_level":0,"honeypot":false},"dmz_mail":{"owner":"red","compromised":true,"isolated":true,"alert_level":30,"data_exfil":0.0,"patch_level":0,"honeypot":false},"fw_internal":{"owner":"red","compromised":true,"isolated":false,"alert_level":10,"data_exfil":0.0,"patch_level":0,"honeypot":false},"workstation1":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":2,"data_exfil":0.0,"patch_level":0,"honeypot":false},"workstation2":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":2,"data_exfil":0.0,"patch_level":0,"honeypot":false},"db_server":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"file_server":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"ad_server":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":1,"honeypot":false}},{"internet":{"owner":"blue","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"dmz_web":{"owner":"blue","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"dmz_mail":{"owner":"red","compromised":true,"isolated":true,"alert_level":30,"data_exfil":0.0,"patch_level":0,"honeypot":false},"fw_internal":{"owner":"red","compromised":true,"isolated":false,"alert_level":10,"data_exfil":0.0,"patch_level":0,"honeypot":false},"workstation1":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":2,"data_exfil":0.0,"patch_level":0,"honeypot":false},"workstation2":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":2,"data_exfil":0.0,"patch_level":0,"honeypot":false},"db_server":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":2,"data_exfil":0.0,"patch_level":0,"honeypot":false},"file_server":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"ad_server":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":1,"honeypot":false}},{"internet":{"owner":"blue","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"dmz_web":{"owner":"red","compromised":true,"isolated":false,"alert_level":20,"data_exfil":0.0,"patch_level":0,"honeypot":false},"dmz_mail":{"owner":"blue","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"fw_internal":{"owner":"red","compromised":true,"isolated":false,"alert_level":10,"data_exfil":0.0,"patch_level":0,"honeypot":false},"workstation1":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":2,"data_exfil":0.0,"patch_level":0,"honeypot":false},"workstation2":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":2,"data_exfil":0.0,"patch_level":0,"honeypot":false},"db_server":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":2,"data_exfil":0.0,"patch_level":0,"honeypot":false},"file_server":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"ad_server":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":1,"honeypot":false}},{"internet":{"owner":"blue","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"dmz_web":{"owner":"blue","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"dmz_mail":{"owner":"red","compromised":true,"isolated":false,"alert_level":20,"data_exfil":0.0,"patch_level":0,"honeypot":false},"fw_internal":{"owner":"red","compromised":true,"isolated":false,"alert_level":10,"data_exfil":0.0,"patch_level":0,"honeypot":false},"workstation1":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":2,"data_exfil":0.0,"patch_level":0,"honeypot":false},"workstation2":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":2,"data_exfil":0.0,"patch_level":0,"honeypot":false},"db_server":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":2,"data_exfil":0.0,"patch_level":0,"honeypot":false},"file_server":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"ad_server":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":1,"honeypot":false}},{"internet":{"owner":"blue","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"dmz_web":{"owner":"red","compromised":true,"isolated":false,"alert_level":20,"data_exfil":0.0,"patch_level":0,"honeypot":false},"dmz_mail":{"owner":"red","compromised":true,"isolated":true,"alert_level":20,"data_exfil":0.0,"patch_level":0,"honeypot":false},"fw_internal":{"owner":"red","compromised":true,"isolated":false,"alert_level":10,"data_exfil":0.0,"patch_level":0,"honeypot":false},"workstation1":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":2,"data_exfil":0.0,"patch_level":0,"honeypot":false},"workstation2":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":2,"data_exfil":0.0,"patch_level":0,"honeypot":false},"db_server":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":2,"data_exfil":0.0,"patch_level":0,"honeypot":false},"file_server":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"ad_server":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":1,"honeypot":false}},{"internet":{"owner":"blue","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"dmz_web":{"owner":"blue","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":0,"honeypot":false},"dmz_mail":{"owner":"red","compromised":true,"isolated":true,"alert_level":20,"data_exfil":0.0,"patch_level":0,"honeypot":false},"fw_internal":{"owner":"red","compromised":true,"isolated":false,"alert_level":10,"data_exfil":0.0,"patch_level":0,"honeypot":false},"workstation1":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":2,"data_exfil":0.0,"patch_level":0,"honeypot":false},"workstation2":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":2,"data_exfil":0.0,"patch_level":0,"honeypot":false},"db_server":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":2,"data_exfil":0.0,"patch_level":0,"honeypot":false},"file_server":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":2,"data_exfil":0.0,"patch_level":0,"honeypot":false},"ad_server":{"owner":"neutral","compromised":false,"isolated":false,"alert_level":0,"data_exfil":0.0,"patch_level":1,"honeypot":false}}]};
+
+// ══════════════════════════════════════════════════════
+//  LAYOUT — predefined positions for the corporate network
+// ══════════════════════════════════════════════════════
+const NODE_POSITIONS = {
+  internet:     { x: 0.50, y: 0.08 },
+  dmz_web:      { x: 0.28, y: 0.25 },
+  dmz_mail:     { x: 0.72, y: 0.25 },
+  fw_internal:  { x: 0.50, y: 0.42 },
+  workstation1: { x: 0.20, y: 0.62 },
+  workstation2: { x: 0.42, y: 0.62 },
+  db_server:    { x: 0.63, y: 0.62 },
+  file_server:  { x: 0.30, y: 0.80 },
+  ad_server:    { x: 0.70, y: 0.80 },
+  // ICS
+  corp_laptop:  { x: 0.50, y: 0.08 },
+  it_server:    { x: 0.50, y: 0.28 },
+  historian:    { x: 0.25, y: 0.46 },
+  hmi:          { x: 0.75, y: 0.46 },
+  dmz_firewall: { x: 0.50, y: 0.46 },
+  plc_pump:     { x: 0.30, y: 0.72 },
+  plc_valve:    { x: 0.70, y: 0.72 },
+  // Cloud
+  public_api:   { x: 0.50, y: 0.10 },
+  lambda_fn:    { x: 0.25, y: 0.32 },
+  ec2_app:      { x: 0.75, y: 0.32 },
+  rds_db:       { x: 0.50, y: 0.55 },
+  s3_bucket:    { x: 0.20, y: 0.75 },
+  iam_role:     { x: 0.80, y: 0.55 },
+  vpc_endpoint: { x: 0.50, y: 0.75 },
+};
+
+const NODE_ICONS = {
+  router: '⬡', server: '▣', workstation: '◻', firewall: '◈',
+  database: '◆', dmz: '◉'
+};
+
+const TYPE_COLORS = {
+  router: '#f5a623', server: '#00d4ff', workstation: '#00ff88',
+  firewall: '#ff9f43', database: '#ff2d55', dmz: '#a55eea'
+};
+
+// ══════════════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════════════
+let currentTurn = 0;
+let isPlaying   = false;
+let playTimer   = null;
+let svgW = 0, svgH = 0;
+
+const svg      = document.getElementById('network-canvas');
+const tooltip  = document.getElementById('tooltip');
+const logEl    = document.getElementById('action-log');
+const nodeGrid = document.getElementById('node-grid');
+
+// ══════════════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════════════
+function init() {
+  document.getElementById('scenario-name').textContent = GAME_DATA.scenario;
+
+  const wb = document.getElementById('winner-badge');
+  wb.textContent = (GAME_DATA.winner || 'blue').toUpperCase() + ' WINS';
+  wb.className = 'winner-badge ' + GAME_DATA.winner;
+
+  buildScoreChart();
+  buildTurnMarkers();
+  buildActionLog();
+  buildNodeGrid();
+  resizeAndDraw();
+
+  window.addEventListener('resize', () => {
+    resizeAndDraw();
+  });
+
+  // Timeline scrubbing
+  const track = document.getElementById('scrubber-track');
+  let dragging = false;
+  track.addEventListener('mousedown', e => { dragging = true; handleScrub(e); });
+  window.addEventListener('mousemove', e => { if (dragging) handleScrub(e); });
+  window.addEventListener('mouseup', () => { dragging = false; });
+
+  document.getElementById('btn-prev').onclick  = () => { stopPlay(); setTurn(currentTurn - 1); };
+  document.getElementById('btn-next').onclick  = () => { stopPlay(); setTurn(currentTurn + 1); };
+  document.getElementById('btn-reset').onclick = () => { stopPlay(); setTurn(0); };
+  document.getElementById('btn-play').onclick  = togglePlay;
+}
+
+function resizeAndDraw() {
+  const area = document.getElementById('canvas-area');
+  svgW = area.clientWidth;
+  svgH = area.clientHeight;
+  svg.setAttribute('width', svgW);
+  svg.setAttribute('height', svgH);
+  drawNetwork(currentTurn);
+}
+
+// ══════════════════════════════════════════════════════
+//  TURN MANAGEMENT
+// ══════════════════════════════════════════════════════
+function setTurn(t) {
+  currentTurn = Math.max(0, Math.min(GAME_DATA.total_turns, t));
+  updateScrubber();
+  drawNetwork(currentTurn);
+  updateScores(currentTurn);
+  updateNodeGrid(currentTurn);
+  highlightLogEntry(currentTurn);
+  document.getElementById('turn-counter').textContent =
+    `T ${String(currentTurn).padStart(2,'0')} / ${String(GAME_DATA.total_turns).padStart(2,'0')}`;
+}
+
+function togglePlay() {
+  isPlaying ? stopPlay() : startPlay();
+}
+
+function startPlay() {
+  isPlaying = true;
+  document.getElementById('btn-play').classList.add('active');
+  document.getElementById('btn-play').textContent = '⏸';
+  tick();
+}
+
+function stopPlay() {
+  isPlaying = false;
+  clearTimeout(playTimer);
+  document.getElementById('btn-play').classList.remove('active');
+  document.getElementById('btn-play').textContent = '▶';
+}
+
+function tick() {
+  if (!isPlaying) return;
+  if (currentTurn >= GAME_DATA.total_turns) { stopPlay(); return; }
+  setTurn(currentTurn + 1);
+  const speed = parseInt(document.getElementById('speed-select').value);
+  playTimer = setTimeout(tick, speed);
+}
+
+function updateScrubber() {
+  const pct = GAME_DATA.total_turns > 0 ? (currentTurn / GAME_DATA.total_turns) * 100 : 0;
+  document.getElementById('scrubber-fill').style.width = pct + '%';
+  document.getElementById('scrubber-handle').style.left = pct + '%';
+}
+
+function handleScrub(e) {
+  const track = document.getElementById('scrubber-track');
+  const rect  = track.getBoundingClientRect();
+  const pct   = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+  setTurn(Math.round(pct * GAME_DATA.total_turns));
+}
+
+// ══════════════════════════════════════════════════════
+//  NETWORK DRAWING
+// ══════════════════════════════════════════════════════
+function getNodePos(nodeId) {
+  const pos = NODE_POSITIONS[nodeId];
+  if (!pos) return { x: svgW / 2, y: svgH / 2 };
+  return { x: pos.x * svgW, y: pos.y * svgH };
+}
+
+function getSnapshot(turn) {
+  return GAME_DATA.snapshots[Math.min(turn, GAME_DATA.snapshots.length - 1)];
+}
+
+function drawNetwork(turn) {
+  if (!svgW || !svgH) return;
+  const snap = getSnapshot(turn);
+  const turnData = turn > 0 ? GAME_DATA.history[turn - 1] : null;
+
+  // Clear SVG
+  while (svg.firstChild) svg.removeChild(svg.firstChild);
+
+  // Defs
+  const defs = makeSVG('defs');
+
+  // Glow filters
+  ['red','blue','amber','green'].forEach(c => {
+    const colors = { red:'#ff2d55', blue:'#00d4ff', amber:'#f5a623', green:'#00ff88' };
+    const f = makeSVG('filter', { id:`glow-${c}`, x:'-50%', y:'-50%', width:'200%', height:'200%' });
+    const fe = makeSVG('feGaussianBlur', { in:'SourceGraphic', stdDeviation:'4', result:'blur' });
+    const cm = makeSVG('feColorMatrix', {
+      in:'blur', type:'matrix',
+      values:`0 0 0 0 0   0 0 0 0 0   0 0 0 0 0   0 0 0 3 -1`
+    });
+    f.appendChild(fe); f.appendChild(cm);
+    defs.appendChild(f);
+  });
+  svg.appendChild(defs);
+
+  // Grid pattern background
+  const gridGroup = makeSVG('g', { opacity: '0.06' });
+  const step = 40;
+  for (let x = 0; x < svgW; x += step) {
+    gridGroup.appendChild(makeSVG('line', {
+      x1: x, y1: 0, x2: x, y2: svgH,
+      stroke: '#4a7090', 'stroke-width': '0.5'
+    }));
+  }
+  for (let y = 0; y < svgH; y += step) {
+    gridGroup.appendChild(makeSVG('line', {
+      x1: 0, y1: y, x2: svgW, y2: y,
+      stroke: '#4a7090', 'stroke-width': '0.5'
+    }));
+  }
+  svg.appendChild(gridGroup);
+
+  // Draw edges
+  GAME_DATA.edges.forEach(edge => {
+    const src = getNodePos(edge.source);
+    const dst = getNodePos(edge.target);
+    const srcSnap = snap[edge.source] || {};
+    const dstSnap = snap[edge.target] || {};
+
+    // Is this edge "active" this turn?
+    const isRedActive = turnData && (
+      (turnData.red_action_type === 'lateral_move' &&
+       turnData.red_target === edge.target) ||
+      (turnData.red_action_type === 'exploit' &&
+       turnData.red_target === edge.target) ||
+      (turnData.red_action_type === 'exfiltrate' &&
+       turnData.red_target === edge.source)
+    );
+    const isBlueActive = turnData && (
+      turnData.blue_action_type === 'block_edge' &&
+      String(turnData.blue_target) === `${edge.source},${edge.target}`
+    );
+
+    const strokeColor = isRedActive ? '#ff2d55' : isBlueActive ? '#00d4ff' :
+                        edge.monitored ? '#1a6a8a' : '#1a3a50';
+    const strokeW = isRedActive ? 2.5 : edge.monitored ? 1.5 : 1;
+    const opacity = (srcSnap.isolated || dstSnap.isolated) ? '0.2' : '0.7';
+
+    // Main edge
+    const line = makeSVG('line', {
+      x1: src.x, y1: src.y, x2: dst.x, y2: dst.y,
+      stroke: strokeColor,
+      'stroke-width': strokeW,
+      opacity,
+      'stroke-dasharray': edge.monitored ? '4,3' : 'none',
+    });
+    svg.appendChild(line);
+
+    // Active data flow animation
+    if (isRedActive && turnData.red_status === 'success') {
+      const packet = makeSVG('circle', { r: 4, fill: '#ff2d55', opacity: 0.9 });
+      const anim = makeSVG('animateMotion', {
+        dur: '0.8s', repeatCount: '1', fill: 'freeze'
+      });
+      const mp = makeSVG('mpath');
+      // Use path instead
+      const pathD = `M ${src.x} ${src.y} L ${dst.x} ${dst.y}`;
+      const animPath = makeSVG('animateMotion', { path: pathD, dur: '0.8s', repeatCount: '1' });
+      packet.appendChild(animPath);
+      svg.appendChild(packet);
+    }
+
+    // Monitored edge label
+    if (edge.monitored) {
+      const mx = (src.x + dst.x) / 2;
+      const my = (src.y + dst.y) / 2;
+      const ml = makeSVG('text', {
+        x: mx, y: my - 5,
+        fill: '#1a8aaa', 'font-size': 8, 'text-anchor': 'middle',
+        'font-family': "'Share Tech Mono'",
+      });
+      ml.textContent = '◈';
+      svg.appendChild(ml);
+    }
+  });
+
+  // Draw nodes
+  GAME_DATA.nodes.forEach(node => {
+    const pos    = getNodePos(node.id);
+    const state  = snap[node.id] || {};
+    const isRedTarget  = turnData && turnData.red_target  === node.id;
+    const isBlueTarget = turnData && turnData.blue_target === node.id;
+    const isActive = isRedTarget || isBlueTarget;
+
+    const baseColor = TYPE_COLORS[node.type] || '#4a7090';
+
+    // Determine status color
+    let nodeColor = state.compromised ? '#ff2d55' :
+                    state.isolated    ? '#2a4a5a' :
+                    state.honeypot    ? '#f5a623' :
+                    state.owner === 'blue' ? '#00d4ff' :
+                    baseColor;
+
+    const r = 20 + (node.value * 1.2);
+
+    // Pulse ring for active nodes
+    if (isActive) {
+      const ring = makeSVG('circle', {
+        cx: pos.x, cy: pos.y, r,
+        fill: 'none',
+        stroke: isRedTarget ? '#ff2d55' : '#00d4ff',
+        'stroke-width': 1,
+        opacity: 0,
+      });
+      const anim = makeSVG('animate', {
+        attributeName: 'r', from: r, to: r + 28,
+        dur: '1.2s', repeatCount: '3'
+      });
+      const anim2 = makeSVG('animate', {
+        attributeName: 'opacity', from: 0.8, to: 0,
+        dur: '1.2s', repeatCount: '3'
+      });
+      ring.appendChild(anim); ring.appendChild(anim2);
+      svg.appendChild(ring);
+    }
+
+    // Alert halo
+    if (state.alert_level > 20) {
+      const alertHalo = makeSVG('circle', {
+        cx: pos.x, cy: pos.y, r: r + 6,
+        fill: 'none',
+        stroke: '#f5a623',
+        'stroke-width': state.alert_level / 20,
+        opacity: Math.min(0.8, state.alert_level / 100),
+        'stroke-dasharray': '3,4',
+      });
+      svg.appendChild(alertHalo);
+    }
+
+    // Exfil progress arc
+    if (state.data_exfil > 0) {
+      const pct = state.data_exfil;
+      const angle = pct * 2 * Math.PI;
+      const x2 = pos.x + (r + 8) * Math.sin(angle);
+      const y2 = pos.y - (r + 8) * Math.cos(angle);
+      const large = pct > 0.5 ? 1 : 0;
+      const arc = makeSVG('path', {
+        d: `M ${pos.x} ${pos.y - r - 8} A ${r+8} ${r+8} 0 ${large} 1 ${x2} ${y2}`,
+        fill: 'none', stroke: '#ff2d55',
+        'stroke-width': 2, opacity: 0.8,
+        'stroke-linecap': 'round',
+      });
+      svg.appendChild(arc);
+    }
+
+    // Node background
+    const circle = makeSVG('circle', {
+      cx: pos.x, cy: pos.y, r,
+      fill: state.compromised ? '#1a0810' :
+            state.isolated    ? '#0a1a20' :
+            state.honeypot    ? '#1a1408' : '#081828',
+      stroke: nodeColor,
+      'stroke-width': isActive ? 2.5 : state.compromised ? 2 : 1.5,
+    });
+    if (isActive) circle.setAttribute('filter', `url(#glow-${isRedTarget ? 'red' : 'blue'})`);
+    svg.appendChild(circle);
+
+    // Node type icon
+    const icon = makeSVG('text', {
+      x: pos.x, y: pos.y - 4,
+      fill: nodeColor,
+      'font-size': 14,
+      'text-anchor': 'middle',
+      'dominant-baseline': 'middle',
+      'font-family': "'Share Tech Mono'",
+    });
+    icon.textContent = NODE_ICONS[node.type] || '○';
+    svg.appendChild(icon);
+
+    // Node label
+    const label = makeSVG('text', {
+      x: pos.x, y: pos.y + r + 14,
+      fill: state.isolated ? '#2a4a5a' : '#c8dfe8',
+      'font-size': 9,
+      'text-anchor': 'middle',
+      'font-family': "'Share Tech Mono'",
+      'letter-spacing': 1,
+    });
+    label.textContent = node.id.replace('_', ' ').toUpperCase();
+    svg.appendChild(label);
+
+    // Value badge
+    if (node.value > 0) {
+      const badge = makeSVG('text', {
+        x: pos.x + r - 4, y: pos.y - r + 6,
+        fill: nodeColor, 'font-size': 9,
+        'text-anchor': 'middle', 'font-family': "'Exo 2'", 'font-weight': 800,
+      });
+      badge.textContent = node.value;
+      svg.appendChild(badge);
+    }
+
+    // Status text inside node
+    if (state.compromised) {
+      const st = makeSVG('text', {
+        x: pos.x, y: pos.y + 9,
+        fill: '#ff2d55', 'font-size': 7,
+        'text-anchor': 'middle', 'font-family': "'Share Tech Mono'", 'letter-spacing': 1,
+      });
+      st.textContent = 'PWNED';
+      svg.appendChild(st);
+    } else if (state.isolated) {
+      const st = makeSVG('text', {
+        x: pos.x, y: pos.y + 9,
+        fill: '#4a7090', 'font-size': 7,
+        'text-anchor': 'middle', 'font-family': "'Share Tech Mono'", 'letter-spacing': 1,
+      });
+      st.textContent = 'ISOLATED';
+      svg.appendChild(st);
+    } else if (state.honeypot) {
+      const st = makeSVG('text', {
+        x: pos.x, y: pos.y + 9,
+        fill: '#f5a623', 'font-size': 7,
+        'text-anchor': 'middle', 'font-family': "'Share Tech Mono'", 'letter-spacing': 1,
+      });
+      st.textContent = 'HONEY';
+      svg.appendChild(st);
+    }
+
+    // Hover zone
+    const hitArea = makeSVG('circle', {
+      cx: pos.x, cy: pos.y, r: r + 5,
+      fill: 'transparent', cursor: 'pointer',
+    });
+    hitArea.addEventListener('mouseenter', e => showTooltip(e, node, state));
+    hitArea.addEventListener('mousemove', e => moveTooltip(e));
+    hitArea.addEventListener('mouseleave', hideTooltip);
+    svg.appendChild(hitArea);
+  });
+
+  // Action annotation at top-right
+  if (turnData) {
+    drawActionAnnotation(turnData);
+  }
+}
+
+function drawActionAnnotation(t) {
+  const g = makeSVG('g');
+  const icons = { exploit:'⚡', scan:'◎', lateral_move:'⤳', exfiltrate:'⬁',
+                  patch:'✚', isolate:'⊘', restore:'↺', monitor:'◈', hunt:'⚑',
+                  deploy_honeypot:'⊛', harden:'⬡', block_edge:'╳', pass:'—',
+                  ddos:'⚡⚡', privilege_esc:'▲' };
+
+  const texts = [
+    { team:'RED',  color:'#ff2d55', action: t.red_action_type,  target: t.red_target,  status: t.red_status  },
+    { team:'BLUE', color:'#00d4ff', action: t.blue_action_type, target: t.blue_target, status: t.blue_status },
+  ];
+
+  texts.forEach((item, i) => {
+    const y = 20 + i * 22;
+    const icon = icons[item.action] || '?';
+    const statusColor = item.status === 'success' ? '#00ff88' :
+                        item.status === 'failure' ? '#5a2030' : '#f5a623';
+
+    const bg = makeSVG('rect', {
+      x: svgW - 240, y: y - 12, width: 228, height: 18,
+      fill: '#0a1820', stroke: item.color, 'stroke-width': 0.5, opacity: 0.85,
+    });
+    g.appendChild(bg);
+
+    const txt = makeSVG('text', {
+      x: svgW - 232, y: y,
+      fill: item.color, 'font-size': 9,
+      'font-family': "'Share Tech Mono'", 'letter-spacing': 0.5,
+    });
+    txt.textContent = `${item.team} ${icon} ${item.action.toUpperCase().replace('_',' ')}`;
+    if (item.target) txt.textContent += ` → ${item.target.replace('_',' ')}`;
+    g.appendChild(txt);
+
+    const dot = makeSVG('circle', {
+      cx: svgW - 16, cy: y - 4, r: 3,
+      fill: statusColor,
+    });
+    g.appendChild(dot);
+  });
+
+  svg.appendChild(g);
+}
+
+// ══════════════════════════════════════════════════════
+//  SCORE CHART
+// ══════════════════════════════════════════════════════
+function buildScoreChart() {
+  const chartSvg = document.getElementById('score-chart');
+  const W = 288, H = 70;
+  chartSvg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+
+  const turns = GAME_DATA.history.length;
+  if (turns === 0) return;
+
+  const maxScore = Math.max(
+    ...GAME_DATA.history.map(h => Math.max(h.red_score, h.blue_score)), 1
+  );
+
+  function toPath(values, team) {
+    return values.map((v, i) => {
+      const x = (i / (turns - 1 || 1)) * (W - 8) + 4;
+      const y = H - 4 - (v / maxScore) * (H - 10);
+      return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
+    }).join(' ');
+  }
+
+  const reds  = GAME_DATA.history.map(h => h.red_score);
+  const blues = GAME_DATA.history.map(h => h.blue_score);
+
+  // Grid lines
+  [0.25, 0.5, 0.75, 1].forEach(pct => {
+    const y = H - 4 - pct * (H - 10);
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    Object.assign(line, {});
+    line.setAttribute('x1', 4); line.setAttribute('y1', y);
+    line.setAttribute('x2', W - 4); line.setAttribute('y2', y);
+    line.setAttribute('stroke', '#1a3a50'); line.setAttribute('stroke-width', 0.5);
+    chartSvg.appendChild(line);
+  });
+
+  // Area fills
+  [[blues,'#00d4ff'],[reds,'#ff2d55']].forEach(([vals, color]) => {
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    const pts = vals.map((v, i) => {
+      const x = (i / (turns - 1 || 1)) * (W - 8) + 4;
+      const y = H - 4 - (v / maxScore) * (H - 10);
+      return `${x},${y}`;
+    });
+    const d = `M 4,${H-4} L ${pts.join(' L ')} L ${W-4},${H-4} Z`;
+    path.setAttribute('d', d);
+    path.setAttribute('fill', color); path.setAttribute('opacity', '0.08');
+    chartSvg.appendChild(path);
+
+    // Line
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    line.setAttribute('d', toPath(vals));
+    line.setAttribute('stroke', color); line.setAttribute('stroke-width', 1.5);
+    line.setAttribute('fill', 'none'); line.setAttribute('opacity', '0.9');
+    chartSvg.appendChild(line);
+  });
+
+  // Cursor line (updated on turn change) — store ref
+  const cursorLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+  cursorLine.setAttribute('id', 'chart-cursor');
+  cursorLine.setAttribute('stroke', '#f5a623');
+  cursorLine.setAttribute('stroke-width', 1);
+  cursorLine.setAttribute('opacity', 0.6);
+  cursorLine.setAttribute('y1', 0); cursorLine.setAttribute('y2', H);
+  chartSvg.appendChild(cursorLine);
+}
+
+function updateScores(turn) {
+  if (turn === 0) {
+    document.getElementById('red-score').textContent  = '0.0';
+    document.getElementById('blue-score').textContent = '0.0';
+    const cursor = document.getElementById('chart-cursor');
+    if (cursor) { cursor.setAttribute('x1', 4); cursor.setAttribute('x2', 4); }
+    return;
+  }
+  const h = GAME_DATA.history[turn - 1];
+  document.getElementById('red-score').textContent  = h.red_score.toFixed(1);
+  document.getElementById('blue-score').textContent = h.blue_score.toFixed(1);
+
+  const W = 288, turns = GAME_DATA.history.length;
+  const x = ((turn - 1) / (turns - 1 || 1)) * (W - 8) + 4;
+  const cursor = document.getElementById('chart-cursor');
+  if (cursor) { cursor.setAttribute('x1', x); cursor.setAttribute('x2', x); }
+}
+
+// ══════════════════════════════════════════════════════
+//  ACTION LOG
+// ══════════════════════════════════════════════════════
+function buildActionLog() {
+  logEl.innerHTML = '';
+  GAME_DATA.history.forEach((h, i) => {
+    const div = document.createElement('div');
+    div.className = 'log-entry';
+    div.dataset.turn = h.turn;
+
+    const statusIconR = h.red_status === 'success' ? '✓' : h.red_status === 'failure' ? '✗' : '⚠';
+    const statusIconB = h.blue_status === 'success' ? '✓' : h.blue_status === 'failure' ? '✗' : '⚠';
+
+    div.innerHTML = `
+      <div class="log-turn">TURN ${String(h.turn).padStart(2,'0')}</div>
+      <div class="log-red">🔴 ${h.red_action_type.toUpperCase().replace('_',' ')}
+        ${h.red_target ? '→ ' + h.red_target.replace('_',' ') : ''}
+        <span class="log-status-${h.red_status}">${statusIconR}</span>
+      </div>
+      <div class="log-blue">🔵 ${h.blue_action_type.toUpperCase().replace('_',' ')}
+        ${h.blue_target ? '→ ' + h.blue_target.replace('_',' ') : ''}
+        <span class="log-status-${h.blue_status}">${statusIconB}</span>
+      </div>
+      ${h.alerts.length ? `<div class="log-alert">⚠ ${h.alerts[0]}</div>` : ''}
+    `;
+    div.onclick = () => { stopPlay(); setTurn(h.turn); };
+    logEl.appendChild(div);
+  });
+}
+
+function highlightLogEntry(turn) {
+  document.querySelectorAll('.log-entry').forEach(el => {
+    el.classList.remove('active', 'current-turn');
+    if (parseInt(el.dataset.turn) === turn) {
+      el.classList.add('active', 'current-turn');
+      el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+  });
+}
+
+// ══════════════════════════════════════════════════════
+//  NODE GRID
+// ══════════════════════════════════════════════════════
+function buildNodeGrid() {
+  nodeGrid.innerHTML = '';
+  GAME_DATA.nodes.forEach(node => {
+    const chip = document.createElement('div');
+    chip.className = 'node-chip';
+    chip.dataset.id = node.id;
+    chip.innerHTML = `
+      <div class="node-chip-name">${node.id.replace(/_/g,' ')}</div>
+      <div class="node-chip-owner neutral" data-owner="${node.id}">—</div>
+      <div class="exfil-bar" data-exfil="${node.id}" style="width:0%"></div>
+    `;
+    nodeGrid.appendChild(chip);
+  });
+}
+
+function updateNodeGrid(turn) {
+  const snap = getSnapshot(turn);
+  GAME_DATA.nodes.forEach(node => {
+    const state = snap[node.id] || {};
+    const chip = nodeGrid.querySelector(`[data-id="${node.id}"]`);
+    if (!chip) return;
+    chip.className = 'node-chip' +
+      (state.compromised ? ' compromised' : '') +
+      (state.isolated ? ' isolated' : '') +
+      (state.honeypot ? ' honeypot' : '');
+
+    const ownerEl = chip.querySelector('[data-owner]');
+    if (ownerEl) {
+      ownerEl.className = 'node-chip-owner ' + (state.owner || 'neutral');
+      ownerEl.textContent = state.compromised ? 'PWNED' :
+                            state.isolated    ? 'ISOLATED' :
+                            state.honeypot    ? 'HONEY' :
+                            (state.owner || 'neutral').toUpperCase();
+    }
+    const exfilEl = chip.querySelector('[data-exfil]');
+    if (exfilEl) exfilEl.style.width = (state.data_exfil * 100) + '%';
+  });
+}
+
+// ══════════════════════════════════════════════════════
+//  TURN MARKERS
+// ══════════════════════════════════════════════════════
+function buildTurnMarkers() {
+  const container = document.getElementById('turn-markers');
+  const total = GAME_DATA.total_turns;
+  GAME_DATA.history.forEach(h => {
+    const pct = (h.turn / total) * 100;
+    const mark = document.createElement('div');
+    mark.className = 'turn-marker ' +
+      (h.alerts.length > 0 ? 'alert' :
+       h.red_status === 'success' ? 'red-action' : 'blue-action');
+    mark.style.left = pct + '%';
+    mark.style.position = 'absolute';
+    mark.style.width = '2px';
+    mark.style.height = '8px';
+    mark.style.top = '50%';
+    mark.style.transform = 'translate(-50%, -50%)';
+    container.appendChild(mark);
+  });
+}
+
+// ══════════════════════════════════════════════════════
+//  TOOLTIP
+// ══════════════════════════════════════════════════════
+function showTooltip(e, node, state) {
+  tooltip.innerHTML = `
+    <div class="tooltip-title">${node.label}</div>
+    <div class="tooltip-row"><span class="tooltip-key">TYPE</span><span class="tooltip-val">${node.type}</span></div>
+    <div class="tooltip-row"><span class="tooltip-key">VALUE</span><span class="tooltip-val">${node.value}</span></div>
+    <div class="tooltip-row"><span class="tooltip-key">OWNER</span><span class="tooltip-val ${state.owner || 'neutral'}">${(state.owner || 'neutral').toUpperCase()}</span></div>
+    <div class="tooltip-row"><span class="tooltip-key">STATUS</span><span class="tooltip-val ${state.compromised ? 'red' : state.isolated ? '' : 'green'}">${state.compromised ? 'COMPROMISED' : state.isolated ? 'ISOLATED' : 'SECURE'}</span></div>
+    <div class="tooltip-row"><span class="tooltip-key">ALERT</span><span class="tooltip-val">${state.alert_level || 0}/100</span></div>
+    <div class="tooltip-row"><span class="tooltip-key">EXFIL</span><span class="tooltip-val red">${((state.data_exfil || 0) * 100).toFixed(0)}%</span></div>
+    <div class="tooltip-row"><span class="tooltip-key">PATCH LVL</span><span class="tooltip-val">${state.patch_level || 0}</span></div>
+    ${node.vulnerabilities.length ? `<div class="tooltip-row" style="margin-top:4px"><span class="tooltip-key">VULNS</span><span class="tooltip-val red">${node.vulnerabilities.length}</span></div>` : ''}
+    ${node.services.length ? `<div class="tooltip-row"><span class="tooltip-key">SERVICES</span><span class="tooltip-val" style="font-size:9px">${node.services.slice(0,2).join(', ')}</span></div>` : ''}
+  `;
+  tooltip.classList.add('visible');
+  moveTooltip(e);
+}
+
+function moveTooltip(e) {
+  const area = document.getElementById('canvas-area');
+  const rect = area.getBoundingClientRect();
+  let x = e.clientX - rect.left + 16;
+  let y = e.clientY - rect.top - 10;
+  if (x + 230 > svgW) x = e.clientX - rect.left - 230;
+  if (y + 180 > svgH) y = e.clientY - rect.top - 180;
+  tooltip.style.left = x + 'px';
+  tooltip.style.top  = y + 'px';
+}
+
+function hideTooltip() {
+  tooltip.classList.remove('visible');
+}
+
+// ══════════════════════════════════════════════════════
+//  HELPERS
+// ══════════════════════════════════════════════════════
+function makeSVG(tag, attrs = {}) {
+  const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  Object.entries(attrs).forEach(([k, v]) => el.setAttribute(k, v));
+  return el;
+}
+
+// ══════════════════════════════════════════════════════
+//  BOOT
+// ══════════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', () => {
+  init();
+  setTurn(0);
+});
+</script>
+</body>
+</html>
