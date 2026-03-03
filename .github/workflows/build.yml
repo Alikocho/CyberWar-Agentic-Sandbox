@@ -1,1 +1,50 @@
+name: Build & Release
 
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag to release (e.g. v1.0.0)'
+        required: true
+        default: 'v1.0.0'
+
+permissions:
+  contents: write
+
+jobs:
+
+  build-mac:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -r requirements.txt
+      - run: pyinstaller cyberwar.spec
+      - run: cd dist && zip -r CyberWarSandbox_Mac.zip CyberWarSandbox.app
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name != '' && github.ref_name || inputs.version }}
+          name: CyberWar Sandbox ${{ github.ref_name != '' && github.ref_name || inputs.version }}
+          files: dist/CyberWarSandbox_Mac.zip
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -r requirements.txt
+      - run: pyinstaller cyberwar.spec
+      - shell: pwsh
+        run: Compress-Archive -Path dist\CyberWarSandbox -DestinationPath dist\CyberWarSandbox_Windows.zip
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name != '' && github.ref_name || inputs.version }}
+          name: CyberWar Sandbox ${{ github.ref_name != '' && github.ref_name || inputs.version }}
+          files: dist\CyberWarSandbox_Windows.zip
