@@ -86,7 +86,7 @@ exe = EXE(
     upx=True,
     # windowed=True → no black console window on Windows/Mac
     console=False,
-    icon=None,
+    icon=str(HERE / 'icon.ico') if (IS_WIN and (HERE / 'icon.ico').exists()) else str(HERE / 'icon.icns') if (IS_MAC and (HERE / 'icon.icns').exists()) else None,
 )
 
 coll = COLLECT(
@@ -105,7 +105,7 @@ if IS_MAC:
     app = BUNDLE(
         coll,
         name='CyberWarSandbox.app',
-        icon=None,
+        icon=str(HERE / 'icon.icns') if (HERE / 'icon.icns').exists() else None,
         bundle_identifier='com.cyberwar.sandbox',
         info_plist={
             'CFBundleName':               'CyberWar Sandbox',
