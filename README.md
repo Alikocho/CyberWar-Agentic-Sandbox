@@ -1,56 +1,109 @@
 # CyberWar Agentic Sandbox
 
-A turn-based, multi-agent cyber wargaming simulation framework. Models Red (attacker) vs Blue (defender) teams competing over a graph-based network environment, with partial observability, probabilistic action resolution, and pluggable agent architectures — including an LLM hook for Claude-powered agents.
+A turn-based, multi-agent cyber wargaming simulation. Red team (attacker) vs Blue team (defender) compete over a graph-based network with partial observability, probabilistic action resolution, and pluggable agent types — including human players, AI heuristics, and Claude LLM agents.
+
+Available as a **desktop app** (no install required) or runnable from source.
+
+---
+
+## Download & Run (Desktop App)
+
+Go to the [Releases page](../../releases) and download the latest version for your platform:
+
+| Platform | File | Requirements |
+|----------|------|-------------|
+| macOS | `CyberWarSandbox_Mac.zip` | macOS 11+ |
+| Windows | `CyberWarSandbox_Windows.zip` | Windows 10+ |
+
+**Mac:** Unzip → double-click `CyberWarSandbox.app`. If macOS blocks it, right-click → Open.
+
+**Windows:** Unzip → run `CyberWarSandbox.exe`. The app opens your browser automatically.
+
+---
+
+## What's New in v2.0.0
+
+- **Human player mode** — play as Red team against AI defenders
+- **Live game UI** — interactive browser-based interface for human turns
+- **Desktop app** — runs as a Mac .app or Windows .exe, no Python required
+- **Battle replay** — watch AI vs AI games as animated replays
+- **Fog of war** — Red only sees nodes it has discovered; Blue sees everything
+
+---
+
+## Running from Source
+
+```bash
+git clone https://github.com/Alikocho/CyberWar-Agentic-Sandbox.git
+cd CyberWar-Agentic-Sandbox
+pip install -r requirements.txt
+python app.py
+```
+
+Then open `http://localhost:5000` in your browser.
+
+### CLI mode (no UI)
+
+```bash
+# Heuristic Red vs Heuristic Blue, corporate network, 20 turns
+python main.py
+
+# ICS scenario, Red wins against random blue
+python main.py --scenario ics --red heuristic --blue random --turns 15
+
+# Claude LLM red team vs heuristic defender
+python main.py --red claude --blue heuristic
+
+# Claude vs Claude
+python main.py --red claude --blue claude --scenario ics --turns 15
+
+# Generate a battle replay HTML
+python main.py --red claude --blue heuristic --out battle.html
+```
 
 ---
 
 ## Architecture
 
 ```
-cyberwar/
-├── env/
-│   ├── network.py       # Network, Node, Edge, Vulnerability, Service data models
-│   ├── actions.py       # Action types, Action dataclass, ActionResolver (probabilistic)
-│   └── observation.py   # Partial observability — Red/Blue see different things
+CyberWar-Agentic-Sandbox/
+├── app.py                  # Flask server — game sessions, API endpoints
+├── launcher.py             # Mac desktop launcher (Tkinter window + Flask)
+├── launcher_win.py         # Windows desktop launcher
+├── main.py                 # CLI entrypoint
+├── templates/
+│   └── index.html          # Full game UI (scenario select, replay, live game)
 ├── agents/
-│   └── agents.py        # BaseAgent, RandomRed, HeuristicRed, RandomBlue, HeuristicBlue, LLMAgent
+│   ├── agents.py           # BaseAgent, RandomRed/Blue, HeuristicRed/Blue, LLMAgent
+│   ├── claude_agent.py     # Claude API agent with tool use
+│   └── human_agent.py      # Human interactive agent
 ├── engine/
-│   └── engine.py        # SimulationEngine: turn loop, effect application, win conditions
+│   └── engine.py           # SimulationEngine: turn loop, effects, win conditions
+├── env/
+│   ├── network.py          # Network, Node, Edge, Vulnerability, Service models
+│   ├── actions.py          # ActionType enum, Action dataclass, ActionResolver
+│   └── observation.py      # Partial observability — Red/Blue see different things
 ├── scenarios/
-│   └── scenarios.py     # Pre-built topologies: corporate, ICS/OT, cloud
-└── main.py              # CLI entrypoint
+│   └── __init__.py         # Pre-built topologies: corporate, ICS/OT, cloud
+├── rl/
+│   └── ppo_agent.py        # PPO reinforcement learning agent
+└── cyberwar.spec           # PyInstaller build spec
 ```
 
 ---
 
-## Quick Start
+## Game Modes
 
-```bash
-# Run default: Corporate network, Heuristic Red vs Heuristic Blue, 20 turns
-python main.py
+### Watch (AI vs AI Replay)
+Select a scenario and agent types, then watch the battle play out as an animated network graph replay. See every action, node state change, and alert.
 
-# ICS scenario, Red wins against random blue
-python main.py --scenario ics --red heuristic --blue random --turns 15
+### Play (Human vs AI)
+Take control of the Red team. On each turn you see:
+- Your discovered network (fog of war — unknown nodes are hidden)
+- Available actions and targets
+- Outcome of your last action
 
-# Cloud scenario, quiet mode (no turn-by-turn output)
-python main.py --scenario cloud --quiet
-
-# List all scenarios
-python main.py --list-scenarios
-```
-
----
-
-## CLI Options
-
-| Flag | Default | Description |
-|------|---------|-------------|
-| `--scenario` | `corporate` | Network topology (`corporate`, `ics`, `cloud`) |
-| `--red` | `heuristic` | Red agent type (`heuristic`, `random`) |
-| `--blue` | `heuristic` | Blue agent type (`heuristic`, `random`) |
-| `--turns` | `20` | Max turns before game ends |
-| `--seed` | `42` | RNG seed for reproducibility |
-| `--quiet` | off | Suppress turn-by-turn output |
+Blue AI defends automatically each turn.
 
 ---
 
@@ -60,21 +113,21 @@ python main.py --list-scenarios
 | Action | Effect |
 |--------|--------|
 | `scan` | Discover services & vulnerabilities on a node |
-| `exploit` | Exploit a CVE; probability = CVSS/10 - patch_penalty |
-| `lateral_move` | Pivot from compromised node to neighbor |
-| `privilege_esc` | Gain elevated privileges |
-| `exfiltrate` | Steal data (25% per turn) |
+| `exploit` | Exploit a CVE; probability = CVSS/10 - patch penalty |
+| `lateral_move` | Pivot from a compromised node to a neighbour |
+| `privilege_esc` | Gain elevated privileges on a compromised node |
+| `exfiltrate` | Steal data (25% progress per turn) |
 | `persist` | Install backdoor (survives some restores) |
-| `ddos` | Degrade target services |
+| `ddos` | Degrade target node services |
 
 ### Blue (Defender)
 | Action | Effect |
 |--------|--------|
-| `monitor` | Watch node/edge; raises alert delta on red activity |
-| `patch` | Remove a specific CVE or increase patch level |
-| `isolate` | Cut node off from network |
-| `restore` | Reset node to clean state from backup |
-| `deploy_honeypot` | Trap red agents; triggers high alerts |
+| `monitor` | Watch node/edge; raises alert on Red activity |
+| `patch` | Remove a CVE or increase patch level |
+| `isolate` | Cut node from network |
+| `restore` | Reset node to clean state |
+| `deploy_honeypot` | Trap Red agents; triggers high alerts |
 | `deploy_decoy` | Fake high-value target |
 | `harden` | Increase patch level |
 | `hunt` | Active threat hunt — reveals compromised nodes |
@@ -82,137 +135,21 @@ python main.py --list-scenarios
 
 ---
 
-## Observation System (Partial Observability)
-
-**Red sees:**
-- Only nodes it has scanned or compromised (+ their direct neighbors)
-- No honeypot flags, no alert levels, no Blue plans
-
-**Blue sees:**
-- ALL nodes at all times
-- Alert levels, data exfil progress, honeypot status
-- Alerts generated by Red's actions (especially on monitored nodes/edges)
-
----
-
-## Plugging in an LLM Agent
-
-```python
-from agents.agents import LLMAgent
-from env.network import Team
-import anthropic
-
-client = anthropic.Anthropic()
-
-def claude_fn(prompt: str) -> str:
-    """Call Claude API and return JSON action string."""
-    response = client.messages.create(
-        model="claude-opus-4-6",
-        max_tokens=256,
-        messages=[{"role": "user", "content": prompt}]
-    )
-    return response.content[0].text
-
-red_agent = LLMAgent(
-    agent_id="red-llm",
-    team=Team.RED,
-    llm_fn=claude_fn,
-    start_node="internet",
-    rng=rng,
-)
-```
-
-The `LLMAgent` receives a structured text observation and must return a JSON action:
-```json
-{
-  "action_type": "exploit",
-  "target_node": "dmz_web",
-  "params": {"cve_id": "CVE-2021-44228"}
-}
-```
-
----
-
-## Adding Custom Scenarios
-
-```python
-from env.network import Network, Node, Edge, NodeType, Service, Vulnerability, NodeState, Team
-
-def my_scenario():
-    net = Network(name="My Network")
-    
-    # Entry point (Red starts here)
-    net.add_node(Node("attacker_box", "Attacker", NodeType.WORKSTATION,
-                      state=NodeState(owner=Team.RED, compromised=True)))
-    
-    # Target
-    net.add_node(Node("target_db", "Database", NodeType.DATABASE,
-                      services=[Service("postgres", 5432, "14.0")],
-                      vulnerabilities=[Vulnerability("CVE-2022-XXXX", 9.0, "postgres")],
-                      value=10))
-    
-    net.add_edge(Edge("attacker_box", "target_db"))
-    
-    return net, "attacker_box"  # (network, red_start_node)
-```
-
----
-
-## Win Conditions (configurable)
-
-```python
-WinCondition(
-    max_turns=30,
-    red_score_thresh=20.0,   # Red wins if score ≥ this
-    exfil_thresh=0.8,        # Red wins if any node ≥ 80% exfiltrated
-)
-```
-
----
-
-## Extending the Framework
-
-### Add a new action
-1. Add entry to `ActionType` enum in `actions.py`
-2. Implement `_your_action()` method in `ActionResolver`
-3. Add to dispatch dict in `ActionResolver.resolve()`
-4. Handle effects in `SimulationEngine._apply_effects()`
-
-### Add a new agent
-Subclass `BaseAgent` and implement `act(obs: Observation) -> Action`.
-
-### Add RL training loop
-```python
-for episode in range(1000):
-    network, start = corporate_network()
-    engine = SimulationEngine(network, red_agent, blue_agent, ...)
-    while engine.winner is None:
-        record = engine.step()
-        red_reward  = record.red_outcome.reward
-        blue_reward = record.blue_outcome.reward
-        # → feed to RL update
-```
-
----
-
-## Scenarios Included
+## Scenarios
 
 | Scenario | Nodes | Description |
 |----------|-------|-------------|
 | `corporate` | 9 | Classic DMZ → internal pivot → Active Directory |
-| `ics` | 7 | IT/OT convergence, HMI → PLC attack |
+| `ics` | 7 | IT/OT convergence — HMI → PLC attack path |
 | `cloud` | 7 | API Gateway → Lambda → RDS/S3/IAM |
 
 ---
 
-## Dependencies
+## Observation System (Partial Observability)
 
-```
-networkx
-numpy
-```
+**Red sees:** Only nodes it has scanned or compromised, plus their direct neighbours. No honeypot flags, no alert levels, no Blue plans.
 
-Install: `pip install networkx numpy`
+**Blue sees:** All nodes at all times, alert levels, data exfil progress, honeypot status, and alerts generated by Red activity.
 
 ---
 
@@ -225,27 +162,16 @@ pip install anthropic
 export ANTHROPIC_API_KEY=sk-ant-...
 ```
 
-### Usage
+### How it works
 
-```bash
-# Claude red team vs heuristic defender
-python main.py --red claude --blue heuristic
+`ClaudeAgent` uses native tool use (not JSON-in-text):
 
-# Claude vs Claude — full LLM combat
-python main.py --red claude --blue claude --scenario ics --turns 15
-
-# See Claude's step-by-step reasoning each turn
-python main.py --red claude --blue heuristic --llm-verbose
-
-# Use a more powerful model (slower/costlier but smarter)
-python main.py --red claude --blue claude --model claude-opus-4-6
-
-# Use Haiku for fast/cheap games (default)
-python main.py --red claude --blue claude --model claude-haiku-4-5-20251001
-
-# Generate a battle replay HTML from a Claude game
-python main.py --red claude --blue heuristic --out battle.html
-```
+1. Each turn Claude receives a rich system prompt establishing its role and tactical doctrine
+2. The current observation is formatted as structured markdown with node states, alert levels, and known vulnerabilities
+3. Claude is given a `take_action` tool with a typed schema covering all valid actions
+4. `tool_choice: "any"` forces Claude to always call the tool
+5. Full conversation history is maintained across turns for situational memory
+6. After each turn the engine feeds back the result (success/failure/detected)
 
 ### Model recommendations
 
@@ -255,58 +181,6 @@ python main.py --red claude --blue heuristic --out battle.html
 | `claude-sonnet-4-6` | Medium | Medium | Balanced quality |
 | `claude-opus-4-6` | Slow | High | Best strategy, showcases |
 
-### How it works
-
-`ClaudeAgent` (`agents/claude_agent.py`) uses **native tool use** (not JSON-in-text):
-
-1. Each turn Claude receives a rich system prompt establishing its role, objectives, and tactical doctrine
-2. The current observation is formatted as a structured markdown message with node states, alert levels, known vulnerabilities, and edges
-3. Claude is given a `take_action` tool with a typed schema covering all valid actions
-4. `tool_choice: "any"` forces Claude to always call the tool — no free-form output
-5. The full conversation history is maintained across turns so Claude builds situational memory
-6. After each turn, the engine calls `record_outcome()` to feed the result back (success/failure/detected) so Claude learns what worked
-7. Claude's `reasoning` field in the tool call is logged with `--llm-verbose`
-
-### Embedding ClaudeAgent in your own code
-
-```python
-from agents.claude_agent import ClaudeAgent
-from env.network import Team
-from engine.engine import SimulationEngine, WinCondition
-from scenarios.scenarios import corporate_network
-import random
-
-network, start_node = corporate_network()
-rng = random.Random(42)
-
-red_agent = ClaudeAgent(
-    agent_id   = "red-claude",
-    team       = Team.RED,
-    start_node = start_node,
-    model      = "claude-haiku-4-5-20251001",
-    verbose    = True,   # print reasoning
-    rng        = rng,
-)
-
-blue_agent = ClaudeAgent(
-    agent_id = "blue-claude",
-    team     = Team.BLUE,
-    model    = "claude-opus-4-6",   # stronger defender
-    verbose  = True,
-    rng      = rng,
-)
-
-engine = SimulationEngine(
-    network=network, red_agent=red_agent, blue_agent=blue_agent,
-    win_condition=WinCondition(max_turns=20),
-)
-winner = engine.run()
-
-# See token usage
-print(red_agent.stats_summary())
-print(blue_agent.stats_summary())
-```
-
 ### Token usage estimates (per 20-turn game)
 
 | Config | Input tokens | Output tokens | Approx cost |
@@ -315,3 +189,80 @@ print(blue_agent.stats_summary())
 | Claude vs Claude | ~50k | ~6k | ~$0.04 (Haiku) |
 | Claude vs Claude | ~50k | ~6k | ~$1.50 (Opus) |
 
+---
+
+## Building from Source
+
+Requires Python 3.11 and PyInstaller.
+
+**Mac:**
+```bash
+bash build.sh
+# Output: dist/CyberWarSandbox.app
+```
+
+**Windows:**
+```bat
+build_win.bat
+REM Output: dist\CyberWarSandbox\CyberWarSandbox.exe
+```
+
+Builds are also automated via GitHub Actions — push a version tag to trigger:
+```bash
+git tag v2.0.1 && git push origin v2.0.1
+```
+
+---
+
+## Dependencies
+
+```
+flask
+networkx
+numpy
+pyinstaller
+anthropic  # optional, for Claude LLM agent
+```
+
+Install: `pip install -r requirements.txt`
+
+---
+
+## Win Conditions
+
+```python
+WinCondition(
+    max_turns=30,
+    red_score_thresh=20.0,   # Red wins if score >= this
+    exfil_thresh=0.8,        # Red wins if any node >= 80% exfiltrated
+)
+```
+
+---
+
+## Extending the Framework
+
+### Add a new action
+1. Add entry to `ActionType` enum in `env/actions.py`
+2. Implement `_your_action()` in `ActionResolver`
+3. Add to dispatch dict in `ActionResolver.resolve()`
+4. Handle effects in `engine/engine.py` `_apply_effects()`
+
+### Add a new agent
+Subclass `BaseAgent` and implement `act(obs: Observation) -> Action`.
+
+### Add a custom scenario
+```python
+from env.network import Network, Node, Edge, NodeType, Service, Vulnerability, NodeState, Team
+
+def my_scenario():
+    net = Network(name="My Network")
+    net.add_node(Node("entry", "Entry Point", NodeType.WORKSTATION,
+                      state=NodeState(owner=Team.RED, compromised=True)))
+    net.add_node(Node("target", "Database", NodeType.DATABASE,
+                      services=[Service("postgres", 5432, "14.0")],
+                      vulnerabilities=[Vulnerability("CVE-2022-XXXX", 9.0, "postgres")],
+                      value=10))
+    net.add_edge(Edge("entry", "target"))
+    return net, "entry"
+```
