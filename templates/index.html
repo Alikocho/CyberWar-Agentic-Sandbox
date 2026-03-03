@@ -1,0 +1,2175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CYBERWAR SANDBOX</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Exo+2:wght@300;400;600;800&display=swap');
+
+  :root {
+    --bg:        #050a0e;
+    --bg2:       #081218;
+    --bg3:       #0a1820;
+    --panel:     #0d1f2d;
+    --border:    #1a3a50;
+    --amber:     #f5a623;
+    --amber-dim: #7a5012;
+    --red:       #ff2d55;
+    --red-dim:   #5a0018;
+    --blue:      #00d4ff;
+    --blue-dim:  #004466;
+    --green:     #00ff88;
+    --gray:      #4a7090;
+    --text:      #c8dfe8;
+    --text-dim:  #4a6a7a;
+    --mono:      'Share Tech Mono', monospace;
+    --sans:      'Exo 2', sans-serif;
+    --glow-red:  0 0 12px #ff2d5566, 0 0 30px #ff2d5522;
+    --glow-blue: 0 0 12px #00d4ff66, 0 0 30px #00d4ff22;
+    --glow-amb:  0 0 8px #f5a62344;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    min-height: 100vh;
+    overflow: hidden;
+  }
+  body::after {
+    content: '';
+    position: fixed; inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.12) 3px);
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  /* ── Screens ── */
+  .screen { position: fixed; inset: 0; display: none; flex-direction: column; }
+  .screen.active { display: flex; }
+
+  /* ── SETUP SCREEN ── */
+  #screen-setup {
+    align-items: center;
+    justify-content: center;
+    background: var(--bg);
+  }
+
+  .setup-wrap {
+    width: 720px;
+    max-width: 96vw;
+  }
+
+  .setup-header {
+    text-align: center;
+    margin-bottom: 36px;
+  }
+  .setup-logo {
+    font-family: var(--sans);
+    font-weight: 800;
+    font-size: 36px;
+    letter-spacing: 8px;
+    color: var(--amber);
+    text-shadow: var(--glow-amb);
+    text-transform: uppercase;
+  }
+  .setup-logo span { color: var(--text-dim); font-weight: 300; }
+  .setup-tagline {
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: var(--text-dim);
+    margin-top: 8px;
+    text-transform: uppercase;
+  }
+
+  /* Scenario cards */
+  .section-label {
+    font-size: 9px;
+    letter-spacing: 3px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 6px;
+  }
+
+  .scenario-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-bottom: 28px;
+  }
+
+  .scenario-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    padding: 14px 12px;
+    cursor: pointer;
+    transition: all 0.18s;
+    position: relative;
+    overflow: hidden;
+  }
+  .scenario-card::before {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--amber);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.18s;
+  }
+  .scenario-card:hover, .scenario-card.selected {
+    border-color: var(--amber);
+    background: var(--bg3);
+  }
+  .scenario-card:hover::before, .scenario-card.selected::before { transform: scaleX(1); }
+  .scenario-card.selected { box-shadow: var(--glow-amb); }
+
+  .card-name {
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+  .card-desc {
+    font-size: 9px;
+    color: var(--text-dim);
+    line-height: 1.5;
+    margin-bottom: 8px;
+  }
+  .card-meta {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .card-tag {
+    font-size: 8px;
+    letter-spacing: 1px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 2px 6px;
+  }
+  .card-tag.diff-beginner  { color: var(--green);  border-color: var(--green); }
+  .card-tag.diff-intermediate { color: var(--amber); border-color: var(--amber); }
+  .card-tag.diff-advanced  { color: var(--red);   border-color: var(--red); }
+
+  /* Config row */
+  .config-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 28px;
+  }
+
+  .config-group label {
+    display: block;
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  select, input[type="number"] {
+    width: 100%;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 8px 10px;
+    appearance: none;
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+  select:focus, input:focus { outline: none; border-color: var(--amber); }
+
+  .run-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .run-btn {
+    flex: 1;
+    background: var(--amber-dim);
+    border: 1px solid var(--amber);
+    color: var(--amber);
+    font-family: var(--sans);
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: 4px;
+    padding: 14px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.18s;
+    box-shadow: var(--glow-amb);
+  }
+  .run-btn:hover { background: #9a6015; }
+  .run-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .download-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 14px 18px;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .download-btn:hover { border-color: var(--blue); color: var(--blue); }
+  .download-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .error-msg {
+    color: var(--red);
+    font-size: 11px;
+    margin-top: 10px;
+    min-height: 16px;
+  }
+
+  /* ── LOADING SCREEN ── */
+  #screen-loading {
+    align-items: center;
+    justify-content: center;
+    background: var(--bg);
+  }
+  .loading-inner { text-align: center; }
+  .loading-logo {
+    font-family: var(--sans);
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: 6px;
+    color: var(--amber);
+    margin-bottom: 24px;
+    text-shadow: var(--glow-amb);
+  }
+  .loading-bar-wrap {
+    width: 340px;
+    height: 3px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    margin: 0 auto 16px;
+    overflow: hidden;
+  }
+  .loading-bar {
+    height: 100%;
+    background: var(--amber);
+    animation: loading-sweep 1.6s ease-in-out infinite;
+    box-shadow: var(--glow-amb);
+  }
+  @keyframes loading-sweep {
+    0%   { width: 0%;   margin-left: 0%; }
+    50%  { width: 60%;  margin-left: 20%; }
+    100% { width: 0%;   margin-left: 100%; }
+  }
+  .loading-status {
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+  }
+
+  /* ── REPLAY SCREEN ── */
+  #screen-replay {
+    background: var(--bg);
+  }
+
+  .replay-app {
+    display: grid;
+    grid-template-rows: 54px 1fr 88px;
+    grid-template-columns: 1fr 330px;
+    height: 100vh;
+  }
+
+  /* Header */
+  .r-header {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    gap: 18px;
+    position: relative;
+    overflow: hidden;
+  }
+  .r-header::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(90deg, rgba(255,45,85,0.07) 0%, transparent 35%, transparent 65%, rgba(0,212,255,0.07) 100%);
+  }
+  .r-logo {
+    font-family: var(--sans);
+    font-weight: 800;
+    font-size: 14px;
+    letter-spacing: 4px;
+    color: var(--amber);
+    text-shadow: var(--glow-amb);
+    flex-shrink: 0;
+  }
+  .r-logo span { color: var(--text-dim); font-weight: 300; }
+  .hdiv { width: 1px; height: 22px; background: var(--border); flex-shrink: 0; }
+
+  .r-scenario { display: flex; flex-direction: column; }
+  .r-sc-label { font-size: 9px; letter-spacing: 2px; color: var(--text-dim); text-transform: uppercase; }
+  .r-sc-name  { font-family: var(--sans); font-size: 13px; font-weight: 600; color: var(--text); }
+
+  .threat-wrap { display: flex; flex-direction: column; gap: 3px; min-width: 110px; }
+  .threat-lbl { font-size: 9px; letter-spacing: 1px; color: var(--text-dim); text-transform: uppercase; display: flex; justify-content: space-between; }
+  .threat-track { height: 5px; background: var(--bg3); border: 1px solid var(--border); overflow: hidden; }
+  .threat-fill { height: 100%; transition: width 0.4s, background 0.4s; background: var(--green); }
+
+  .hspacer { flex: 1; }
+
+  .key-hints { display: flex; gap: 10px; }
+  .key-hint { font-size: 9px; color: var(--text-dim); display: flex; align-items: center; gap: 3px; }
+  kbd { font-family: var(--mono); font-size: 8px; background: var(--bg3); border: 1px solid var(--border); padding: 1px 4px; color: var(--amber); }
+
+  .back-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 5px 10px;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 0.15s;
+  }
+  .back-btn:hover { border-color: var(--amber); color: var(--amber); }
+
+  .winner-badge {
+    font-family: var(--sans);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 3px;
+    padding: 4px 14px;
+    border-radius: 2px;
+    text-transform: uppercase;
+    flex-shrink: 0;
+  }
+  .winner-badge.red  { background: var(--red-dim); color: var(--red); border: 1px solid var(--red); box-shadow: var(--glow-red); }
+  .winner-badge.blue { background: var(--blue-dim); color: var(--blue); border: 1px solid var(--blue); box-shadow: var(--glow-blue); }
+
+  /* Canvas */
+  .r-canvas-area { position: relative; overflow: hidden; background: var(--bg); }
+  .corner { position: absolute; width: 18px; height: 18px; z-index: 10; }
+  .corner-tl { top: 10px; left: 10px; border-top: 1px solid var(--border); border-left: 1px solid var(--border); }
+  .corner-tr { top: 10px; right: 10px; border-top: 1px solid var(--border); border-right: 1px solid var(--border); }
+  .corner-bl { bottom: 10px; left: 10px; border-bottom: 1px solid var(--border); border-left: 1px solid var(--border); }
+  .corner-br { bottom: 10px; right: 10px; border-bottom: 1px solid var(--border); border-right: 1px solid var(--border); }
+  #r-svg { width: 100%; height: 100%; display: block; }
+
+  .node-tooltip {
+    position: absolute;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    padding: 10px 14px;
+    font-size: 11px;
+    line-height: 1.8;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+    max-width: 230px;
+    z-index: 100;
+    box-shadow: 0 4px 24px #00000088;
+  }
+  .node-tooltip.visible { opacity: 1; }
+  .tt-title { font-family: var(--sans); font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+  .tt-row { display: flex; justify-content: space-between; gap: 12px; }
+  .tt-key { color: var(--text-dim); }
+  .tt-val { color: var(--amber); }
+  .tt-val.red { color: var(--red); }
+  .tt-val.blue { color: var(--blue); }
+  .tt-val.green { color: var(--green); }
+
+  /* Right panel */
+  .r-side {
+    background: var(--bg2);
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .tab-bar { display: grid; grid-template-columns: repeat(3, 1fr); border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  .tab-btn { background: none; border: none; border-bottom: 2px solid transparent; color: var(--text-dim); font-family: var(--mono); font-size: 9px; letter-spacing: 2px; padding: 10px 4px; cursor: pointer; text-transform: uppercase; transition: all 0.15s; }
+  .tab-btn:hover { color: var(--text); }
+  .tab-btn.active { color: var(--amber); border-bottom-color: var(--amber); }
+  .tab-pane { display: none; flex-direction: column; flex: 1; overflow: hidden; }
+  .tab-pane.active { display: flex; }
+
+  .psec { padding: 12px 14px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  .psec-title { font-size: 9px; letter-spacing: 3px; color: var(--text-dim); text-transform: uppercase; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+  .psec-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  .scores { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .score-card { background: var(--bg3); border: 1px solid var(--border); padding: 8px; text-align: center; }
+  .score-team { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 3px; }
+  .score-team.red { color: var(--red); }
+  .score-team.blue { color: var(--blue); }
+  .score-val { font-family: var(--sans); font-size: 24px; font-weight: 800; line-height: 1; }
+  .score-val.red { color: var(--red); text-shadow: var(--glow-red); }
+  .score-val.blue { color: var(--blue); text-shadow: var(--glow-blue); }
+  #r-score-chart { width: 100%; height: 110px; margin-top: 10px; }
+
+  .stat-rows { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 8px; }
+  .stat-cell { background: var(--bg3); border: 1px solid var(--border); padding: 5px 6px; text-align: center; }
+  .stat-label { font-size: 7px; letter-spacing: 1px; color: var(--text-dim); text-transform: uppercase; }
+  .stat-value { font-size: 13px; font-weight: 600; color: var(--amber); margin-top: 2px; }
+
+  .action-log { flex: 1; overflow-y: auto; padding: 8px 0; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+  .log-entry { padding: 6px 14px; font-size: 10px; line-height: 1.5; border-left: 2px solid transparent; cursor: pointer; transition: background 0.15s; }
+  .log-entry:hover { background: var(--bg3); }
+  .log-entry.active { background: var(--bg3); border-left-color: var(--amber); }
+  .log-turn { font-size: 9px; color: var(--text-dim); letter-spacing: 1px; }
+  .log-red { color: var(--red); }
+  .log-blue { color: var(--blue); }
+  .log-msg { color: var(--text-dim); font-size: 9px; margin-top: 1px; }
+  .log-delta { font-size: 9px; margin-top: 1px; }
+  .log-delta.pos { color: var(--green); }
+  .log-delta.neg { color: var(--red); }
+  .log-alert { color: var(--amber); font-size: 9px; margin-top: 2px; }
+  .log-status-success { color: var(--green); font-size: 9px; }
+  .log-status-failure { color: #aa3344; font-size: 9px; }
+  .log-status-detected { color: var(--amber); font-size: 9px; }
+
+  .node-grid { flex: 1; overflow-y: auto; padding: 10px 12px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; align-content: start; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+  .node-chip { background: var(--bg3); border: 1px solid var(--border); padding: 5px 6px; font-size: 9px; cursor: pointer; transition: all 0.15s; position: relative; overflow: hidden; }
+  .node-chip:hover { border-color: var(--amber); }
+  .node-chip.compromised { border-color: var(--red); }
+  .node-chip.isolated { border-color: var(--gray); opacity: 0.6; }
+  .node-chip.honeypot { border-color: var(--amber); }
+  .node-chip-alert { position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--amber); transform: scaleX(0); transform-origin: left; transition: transform 0.3s; }
+  .node-chip.alert-active .node-chip-alert { transform: scaleX(1); }
+  .node-chip-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-dim); font-size: 8px; }
+  .node-chip-owner { font-family: var(--sans); font-size: 10px; font-weight: 600; margin-top: 1px; }
+  .node-chip-owner.red { color: var(--red); }
+  .node-chip-owner.blue { color: var(--blue); }
+  .node-chip-owner.neutral { color: var(--text-dim); }
+  .exfil-bar { position: absolute; bottom: 0; left: 0; height: 2px; background: var(--red); transition: width 0.3s; box-shadow: 0 0 4px var(--red); }
+
+  .intel-pane { flex: 1; overflow-y: auto; padding: 10px 14px; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+  .intel-group { margin-bottom: 14px; }
+  .intel-group-title { font-size: 9px; letter-spacing: 2px; color: var(--text-dim); text-transform: uppercase; margin-bottom: 6px; border-bottom: 1px solid var(--border); padding-bottom: 4px; }
+  .intel-row { display: flex; justify-content: space-between; font-size: 10px; padding: 3px 0; border-bottom: 1px solid rgba(26,58,80,0.4); gap: 8px; }
+  .intel-key { color: var(--text-dim); }
+  .intel-val { color: var(--text); text-align: right; }
+  .intel-val.red { color: var(--red); }
+  .intel-val.blue { color: var(--blue); }
+  .intel-val.amber { color: var(--amber); }
+  .intel-val.green { color: var(--green); }
+  .vuln-chip { display: inline-block; font-size: 8px; background: var(--red-dim); border: 1px solid var(--red); color: var(--red); padding: 1px 5px; margin: 2px 2px 0 0; }
+
+  /* Timeline */
+  .r-timeline { grid-column: 1 / -1; background: var(--bg2); border-top: 1px solid var(--border); padding: 0 20px; display: flex; align-items: center; gap: 14px; }
+  .playback-controls { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+  .ctrl-btn { background: none; border: 1px solid var(--border); color: var(--text); width: 30px; height: 30px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 11px; transition: all 0.15s; font-family: var(--mono); }
+  .ctrl-btn:hover { border-color: var(--amber); color: var(--amber); }
+  .ctrl-btn.active { background: var(--amber-dim); border-color: var(--amber); color: var(--amber); }
+  .turn-counter { font-family: var(--sans); font-size: 13px; font-weight: 600; color: var(--amber); min-width: 80px; flex-shrink: 0; }
+  .scrubber-wrap { flex: 1; position: relative; }
+  .scrubber-track { height: 6px; background: var(--bg3); border: 1px solid var(--border); position: relative; cursor: pointer; }
+  .scrubber-fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--amber-dim); }
+  .turn-markers { position: absolute; inset: 0; pointer-events: none; }
+  .turn-marker { position: absolute; top: -3px; width: 2px; height: 12px; background: var(--border); transform: translateX(-50%); }
+  .scrubber-handle { position: absolute; top: 50%; transform: translate(-50%,-50%); width: 12px; height: 12px; background: var(--amber); border-radius: 50%; box-shadow: var(--glow-amb); }
+  .speed-wrap { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+  .speed-label { font-size: 9px; letter-spacing: 1px; color: var(--text-dim); }
+  .speed-select { background: var(--bg3); border: 1px solid var(--border); color: var(--text); font-family: var(--mono); font-size: 10px; padding: 3px 6px; cursor: pointer; }
+
+  /* Summary overlay */
+  .summary-overlay { position: fixed; inset: 0; background: rgba(5,10,14,0.92); z-index: 200; display: none; align-items: center; justify-content: center; }
+  .summary-overlay.visible { display: flex; }
+  .summary-box { background: var(--panel); border: 1px solid var(--border); padding: 28px 36px; min-width: 500px; max-width: 620px; position: relative; }
+  .sum-title { font-family: var(--sans); font-size: 22px; font-weight: 800; letter-spacing: 4px; text-transform: uppercase; margin-bottom: 6px; }
+  .sum-title.red  { color: var(--red);  text-shadow: var(--glow-red); }
+  .sum-title.blue { color: var(--blue); text-shadow: var(--glow-blue); }
+  .sum-sub { font-size: 10px; color: var(--text-dim); letter-spacing: 2px; margin-bottom: 20px; }
+  .sum-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+  .sum-stat { background: var(--bg3); border: 1px solid var(--border); padding: 10px 14px; }
+  .sum-stat-lbl { font-size: 9px; letter-spacing: 2px; color: var(--text-dim); text-transform: uppercase; }
+  .sum-stat-val { font-family: var(--sans); font-size: 20px; font-weight: 800; color: var(--text); margin-top: 3px; }
+  .sum-events { border-top: 1px solid var(--border); padding-top: 14px; margin-bottom: 16px; }
+  .sum-events-title { font-size: 9px; letter-spacing: 2px; color: var(--text-dim); text-transform: uppercase; margin-bottom: 8px; }
+  .sum-event { font-size: 10px; color: var(--text-dim); padding: 3px 0; }
+  .sum-event .eturn { color: var(--amber); }
+  .sum-close { position: absolute; top: 14px; right: 18px; background: none; border: 1px solid var(--border); color: var(--text-dim); font-family: var(--mono); font-size: 10px; padding: 4px 10px; cursor: pointer; }
+  .sum-close:hover { border-color: var(--amber); color: var(--amber); }
+  .sum-hint { font-size: 10px; color: var(--text-dim); text-align: center; }
+
+  /* ── LIVE GAME SCREEN ── */
+  #screen-live { background: var(--bg); }
+  .live-app {
+    display: grid;
+    grid-template-rows: 54px 1fr;
+    grid-template-columns: 1fr 380px;
+    height: 100vh;
+  }
+
+  /* Live header */
+  .lv-header {
+    grid-column: 1 / -1;
+    display: flex; align-items: center;
+    padding: 0 20px; gap: 16px;
+    background: var(--bg2); border-bottom: 1px solid var(--border);
+    position: relative; overflow: hidden;
+  }
+  .lv-header::before {
+    content:''; position:absolute; inset:0;
+    background: linear-gradient(90deg, rgba(255,45,85,0.07) 0%, transparent 35%, transparent 65%, rgba(0,212,255,0.07) 100%);
+  }
+  .lv-logo { font-family:var(--sans); font-weight:800; font-size:14px; letter-spacing:4px; color:var(--amber); text-shadow:var(--glow-amb); flex-shrink:0; }
+  .lv-logo span { color:var(--text-dim); font-weight:300; }
+  .lv-team-badge {
+    font-family:var(--sans); font-size:11px; font-weight:800; letter-spacing:3px;
+    padding:4px 14px; border-radius:2px; text-transform:uppercase; flex-shrink:0;
+  }
+  .lv-team-badge.red  { background:var(--red-dim);  color:var(--red);  border:1px solid var(--red);  box-shadow:var(--glow-red); }
+  .lv-team-badge.blue { background:var(--blue-dim); color:var(--blue); border:1px solid var(--blue); box-shadow:var(--glow-blue); }
+  .lv-turn-ctr { font-family:var(--sans); font-size:13px; font-weight:600; color:var(--amber); flex-shrink:0; }
+  .lv-score-pair { display:flex; gap:12px; flex-shrink:0; }
+  .lv-score { font-size:11px; }
+  .lv-score.red  { color:var(--red); }
+  .lv-score.blue { color:var(--blue); }
+  .lv-status { font-size:10px; color:var(--text-dim); }
+  .lv-status.waiting { color:var(--amber); }
+  .lv-status.thinking { color:var(--text-dim); animation: blink-txt 0.8s ease-in-out infinite; }
+  @keyframes blink-txt { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  /* Canvas + side panel share the same rendering code */
+  .lv-canvas-area { position:relative; overflow:hidden; background:var(--bg); }
+  #lv-svg { width:100%; height:100%; display:block; }
+
+  /* Right side — action panel */
+  .lv-side {
+    background:var(--bg2); border-left:1px solid var(--border);
+    display:flex; flex-direction:column; overflow:hidden;
+  }
+
+  /* Score bar at top of side panel */
+  .lv-scores { display:grid; grid-template-columns:1fr 1fr; gap:8px; padding:12px 14px; border-bottom:1px solid var(--border); flex-shrink:0; }
+  .lv-score-card { background:var(--bg3); border:1px solid var(--border); padding:8px; text-align:center; }
+  .lv-score-team { font-size:9px; letter-spacing:2px; text-transform:uppercase; margin-bottom:2px; }
+  .lv-score-team.red { color:var(--red); }
+  .lv-score-team.blue { color:var(--blue); }
+  .lv-score-val { font-family:var(--sans); font-size:22px; font-weight:800; line-height:1; }
+  .lv-score-val.red { color:var(--red); text-shadow:var(--glow-red); }
+  .lv-score-val.blue { color:var(--blue); text-shadow:var(--glow-blue); }
+
+  /* Action picker */
+  .action-picker {
+    flex:1; display:flex; flex-direction:column;
+    overflow:hidden; padding:14px;
+  }
+  .picker-title { font-size:9px; letter-spacing:3px; color:var(--text-dim); text-transform:uppercase; margin-bottom:12px; }
+
+  .action-list {
+    display:flex; flex-direction:column; gap:6px;
+    overflow-y:auto; flex:1;
+    scrollbar-width:thin; scrollbar-color:var(--border) transparent;
+    padding-bottom:8px;
+  }
+  .action-btn {
+    background:var(--bg3); border:1px solid var(--border);
+    color:var(--text); font-family:var(--mono); font-size:10px;
+    padding:8px 10px; text-align:left; cursor:pointer;
+    transition:all 0.15s; position:relative;
+  }
+  .action-btn:hover { border-color:var(--amber); }
+  .action-btn.selected { background:var(--amber-dim); border-color:var(--amber); color:var(--amber); }
+  .action-btn.disabled { opacity:0.3; cursor:not-allowed; pointer-events:none; }
+  .action-btn-label { font-weight:bold; }
+  .action-btn-desc { font-size:8px; color:var(--text-dim); margin-top:2px; }
+
+  /* Sub-selectors */
+  .sub-selector {
+    background:var(--bg3); border:1px solid var(--border);
+    padding:10px 12px; margin-top:2px;
+    display:none; flex-direction:column; gap:8px;
+    flex-shrink:0;
+  }
+  .sub-selector.visible { display:flex; }
+  .sub-label { font-size:9px; letter-spacing:1px; color:var(--text-dim); text-transform:uppercase; margin-bottom:3px; }
+  .target-grid {
+    display:flex; flex-wrap:wrap; gap:4px;
+  }
+  .target-chip {
+    font-size:9px; background:var(--bg); border:1px solid var(--border);
+    color:var(--text-dim); padding:3px 8px; cursor:pointer; transition:all 0.12s;
+  }
+  .target-chip:hover { border-color:var(--amber); color:var(--amber); }
+  .target-chip.selected { background:var(--amber-dim); border-color:var(--amber); color:var(--amber); }
+
+  /* Submit */
+  .submit-area { padding:12px 14px; border-top:1px solid var(--border); flex-shrink:0; }
+  .submit-btn {
+    width:100%; background:var(--amber-dim); border:1px solid var(--amber);
+    color:var(--amber); font-family:var(--sans); font-size:13px; font-weight:800;
+    letter-spacing:3px; padding:12px; text-transform:uppercase; cursor:pointer;
+    transition:all 0.15s; box-shadow:var(--glow-amb);
+  }
+  .submit-btn:hover { background:#9a6015; }
+  .submit-btn:disabled { opacity:0.35; cursor:not-allowed; }
+
+  /* Last turn result */
+  .last-result {
+    padding:10px 14px; border-bottom:1px solid var(--border);
+    font-size:10px; line-height:1.6; flex-shrink:0;
+    max-height:140px; overflow-y:auto;
+    scrollbar-width:thin; scrollbar-color:var(--border) transparent;
+  }
+  .result-turn { font-size:9px; color:var(--text-dim); letter-spacing:1px; margin-bottom:4px; }
+  .result-red { color:var(--red); }
+  .result-blue { color:var(--blue); }
+  .result-msg { color:var(--text-dim); font-size:9px; }
+  .result-alert { color:var(--amber); font-size:9px; }
+
+  /* Game Over banner */
+  .game-over-banner {
+    display:none; flex-direction:column; align-items:center; justify-content:center;
+    padding:20px; text-align:center; background:rgba(5,10,14,0.96);
+    position:absolute; inset:0; z-index:50;
+  }
+  .game-over-banner.visible { display:flex; }
+  .go-title { font-family:var(--sans); font-size:28px; font-weight:800; letter-spacing:6px; text-transform:uppercase; margin-bottom:8px; }
+  .go-title.red  { color:var(--red);  text-shadow:var(--glow-red); }
+  .go-title.blue { color:var(--blue); text-shadow:var(--glow-blue); }
+  .go-sub { font-size:11px; color:var(--text-dim); letter-spacing:2px; margin-bottom:20px; }
+  .go-btns { display:flex; gap:12px; }
+  .go-btn {
+    background:var(--bg2); border:1px solid var(--border); color:var(--text);
+    font-family:var(--mono); font-size:11px; padding:10px 20px; cursor:pointer;
+    transition:all 0.15s;
+  }
+  .go-btn:hover { border-color:var(--amber); color:var(--amber); }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════ SETUP SCREEN ═══════════════════ -->
+<div class="screen active" id="screen-setup">
+  <div class="setup-wrap">
+    <div class="setup-header">
+      <div class="setup-logo">CYBER<span>WAR</span></div>
+      <div class="setup-tagline">Multi-Agent Cybersecurity Simulation Sandbox</div>
+    </div>
+
+    <div class="section-label">Select Scenario</div>
+    <div class="scenario-grid" id="scenario-grid">
+      <!-- populated by JS -->
+    </div>
+
+    <div class="section-label">Configuration</div>
+    <div class="config-row">
+      <div class="config-group">
+        <label>Red Agent</label>
+        <select id="cfg-red">
+          <option value="heuristic">Heuristic</option>
+          <option value="random">Random</option>
+        </select>
+      </div>
+      <div class="config-group">
+        <label>Blue Agent</label>
+        <select id="cfg-blue">
+          <option value="heuristic">Heuristic</option>
+          <option value="random">Random</option>
+        </select>
+      </div>
+      <div class="config-group">
+        <label>Max Turns</label>
+        <input type="number" id="cfg-turns" value="20" min="5" max="50">
+      </div>
+      <div class="config-group">
+        <label>Seed (blank=random)</label>
+        <input type="number" id="cfg-seed" placeholder="auto">
+      </div>
+    </div>
+
+    <div class="section-label" style="margin-top:0">Player Mode</div>
+    <div class="config-row" style="grid-template-columns:1fr 1fr; margin-bottom:16px;">
+      <div class="config-group">
+        <label>Play As</label>
+        <select id="cfg-human-team">
+          <option value="">— Watch (AI vs AI) —</option>
+          <option value="red">⚔ Red Team (Attacker)</option>
+          <option value="blue">🛡 Blue Team (Defender)</option>
+        </select>
+      </div>
+      <div class="config-group">
+        <label>AI Opponent</label>
+        <select id="cfg-ai">
+          <option value="heuristic">Heuristic (smart)</option>
+          <option value="random">Random (easy)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="run-row">
+      <button class="run-btn" id="run-btn" onclick="handleLaunch()">▶ LAUNCH</button>
+      <button class="download-btn" id="dl-btn" onclick="downloadReplay()" title="Run AI vs AI & download standalone HTML">⬇ Download Replay</button>
+    </div>
+    <div class="error-msg" id="error-msg"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════ LOADING SCREEN ═══════════════════ -->
+<div class="screen" id="screen-loading">
+  <div class="loading-inner">
+    <div class="loading-logo">CYBERWAR</div>
+    <div class="loading-bar-wrap"><div class="loading-bar"></div></div>
+    <div class="loading-status" id="loading-status">Initialising simulation...</div>
+  </div>
+</div>
+
+<!-- ═══════════════════ REPLAY SCREEN ═══════════════════ -->
+<div class="screen" id="screen-replay">
+  <div class="replay-app">
+
+    <div class="r-header">
+      <div class="r-logo">CYBER<span>WAR</span></div>
+      <div class="hdiv"></div>
+      <div class="r-scenario">
+        <span class="r-sc-label">Scenario</span>
+        <span class="r-sc-name" id="r-scenario-name">—</span>
+      </div>
+      <div class="hdiv"></div>
+      <div class="threat-wrap">
+        <div class="threat-lbl"><span>Threat</span><span id="r-threat-pct">0%</span></div>
+        <div class="threat-track"><div class="threat-fill" id="r-threat-fill" style="width:0%"></div></div>
+      </div>
+      <div class="hspacer"></div>
+      <div class="key-hints">
+        <span class="key-hint"><kbd>←</kbd><kbd>→</kbd></span>
+        <span class="key-hint"><kbd>SPC</kbd> play</span>
+        <span class="key-hint"><kbd>S</kbd> summary</span>
+      </div>
+      <div class="hdiv"></div>
+      <button class="back-btn" onclick="goSetup()">← NEW GAME</button>
+      <div class="winner-badge blue" id="r-winner-badge">—</div>
+    </div>
+
+    <div class="r-canvas-area" id="r-canvas-area">
+      <div class="corner corner-tl"></div>
+      <div class="corner corner-tr"></div>
+      <div class="corner corner-bl"></div>
+      <div class="corner corner-br"></div>
+      <svg id="r-svg"></svg>
+      <div class="node-tooltip" id="r-tooltip">
+        <div class="tt-title" id="r-tt-title">Node</div>
+        <div id="r-tt-body"></div>
+      </div>
+    </div>
+
+    <div class="r-side">
+      <div class="tab-bar">
+        <button class="tab-btn active" data-tab="intel">① INTEL</button>
+        <button class="tab-btn" data-tab="log">② LOG</button>
+        <button class="tab-btn" data-tab="nodes">③ NODES</button>
+      </div>
+
+      <div class="tab-pane active" id="r-tab-intel">
+        <div class="psec">
+          <div class="psec-title">Score</div>
+          <div class="scores">
+            <div class="score-card">
+              <div class="score-team red">⚔ Red</div>
+              <div class="score-val red" id="r-score-red">0</div>
+            </div>
+            <div class="score-card">
+              <div class="score-team blue">🛡 Blue</div>
+              <div class="score-val blue" id="r-score-blue">0</div>
+            </div>
+          </div>
+          <svg id="r-score-chart"></svg>
+          <div class="stat-rows">
+            <div class="stat-cell"><div class="stat-label">Compromised</div><div class="stat-value" id="r-stat-comp">0</div></div>
+            <div class="stat-cell"><div class="stat-label">Exfil</div><div class="stat-value" id="r-stat-exfil">0%</div></div>
+            <div class="stat-cell"><div class="stat-label">Alerts</div><div class="stat-value" id="r-stat-alerts">0</div></div>
+          </div>
+        </div>
+        <div class="intel-pane" id="r-intel-pane"></div>
+      </div>
+
+      <div class="tab-pane" id="r-tab-log">
+        <div class="action-log" id="r-action-log"></div>
+      </div>
+
+      <div class="tab-pane" id="r-tab-nodes">
+        <div class="node-grid" id="r-node-grid"></div>
+      </div>
+    </div>
+
+    <div class="r-timeline">
+      <div class="playback-controls">
+        <button class="ctrl-btn" id="r-btn-reset">⏮</button>
+        <button class="ctrl-btn" id="r-btn-prev">◀</button>
+        <button class="ctrl-btn" id="r-btn-play">▶</button>
+        <button class="ctrl-btn" id="r-btn-next">▶</button>
+        <button class="ctrl-btn" id="r-btn-summary">≡</button>
+      </div>
+      <div class="turn-counter" id="r-turn-counter">T 00 / 00</div>
+      <div class="scrubber-wrap">
+        <div class="scrubber-track" id="r-scrubber-track">
+          <div class="scrubber-fill" id="r-scrubber-fill"></div>
+          <div class="turn-markers" id="r-turn-markers"></div>
+          <div class="scrubber-handle" id="r-scrubber-handle"></div>
+        </div>
+      </div>
+      <div class="speed-wrap">
+        <span class="speed-label">SPD</span>
+        <select class="speed-select" id="r-speed-select">
+          <option value="1200">0.5×</option>
+          <option value="800" selected>1×</option>
+          <option value="400">2×</option>
+          <option value="150">4×</option>
+          <option value="50">8×</option>
+        </select>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ LIVE GAME SCREEN ═══════════════════ -->
+<div class="screen" id="screen-live">
+  <div class="live-app">
+    <div class="lv-header">
+      <div class="lv-logo">CYBER<span>WAR</span></div>
+      <div class="hdiv"></div>
+      <div class="lv-team-badge red" id="lv-team-badge">RED</div>
+      <div class="hdiv"></div>
+      <div class="r-scenario">
+        <span class="r-sc-label">Scenario</span>
+        <span class="r-sc-name" id="lv-scenario-name">—</span>
+      </div>
+      <div class="hdiv"></div>
+      <div class="lv-score-pair">
+        <span class="lv-score red">⚔ <span id="lv-score-red">0</span></span>
+        <span class="lv-score blue">🛡 <span id="lv-score-blue">0</span></span>
+      </div>
+      <div class="hdiv"></div>
+      <div class="lv-turn-ctr" id="lv-turn-ctr">T 00 / 00</div>
+      <div class="hspacer"></div>
+      <div class="lv-status waiting" id="lv-status">Your turn</div>
+      <div class="hdiv"></div>
+      <button class="back-btn" onclick="goSetup()">← QUIT</button>
+    </div>
+
+    <div class="lv-canvas-area" id="lv-canvas-area">
+      <div class="corner corner-tl"></div><div class="corner corner-tr"></div>
+      <div class="corner corner-bl"></div><div class="corner corner-br"></div>
+      <svg id="lv-svg"></svg>
+      <div class="node-tooltip" id="lv-tooltip">
+        <div class="tt-title" id="lv-tt-title">Node</div>
+        <div id="lv-tt-body"></div>
+      </div>
+      <!-- Game over banner -->
+      <div class="game-over-banner" id="lv-go-banner">
+        <div class="go-title" id="lv-go-title">—</div>
+        <div class="go-sub" id="lv-go-sub">—</div>
+        <div class="go-btns">
+          <button class="go-btn" onclick="goSetup()">← New Game</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="lv-side">
+      <!-- Scores -->
+      <div class="lv-scores">
+        <div class="lv-score-card">
+          <div class="lv-score-team red">⚔ Red</div>
+          <div class="lv-score-val red" id="lv-sc-red">0</div>
+        </div>
+        <div class="lv-score-card">
+          <div class="lv-score-team blue">🛡 Blue</div>
+          <div class="lv-score-val blue" id="lv-sc-blue">0</div>
+        </div>
+      </div>
+
+      <!-- Last turn result -->
+      <div class="last-result" id="lv-last-result">
+        <div style="color:var(--text-dim);font-size:9px;">Waiting for first action...</div>
+      </div>
+
+      <!-- Action picker -->
+      <div class="action-picker">
+        <div class="picker-title">Choose Your Action</div>
+        <div class="action-list" id="lv-action-list">
+          <!-- populated by JS -->
+        </div>
+        <!-- Target selector (shown when action needs a target) -->
+        <div class="sub-selector" id="lv-target-sel">
+          <div class="sub-label" id="lv-target-lbl">Select Target Node</div>
+          <div class="target-grid" id="lv-target-grid"></div>
+        </div>
+        <!-- CVE selector -->
+        <div class="sub-selector" id="lv-cve-sel">
+          <div class="sub-label">Select Vulnerability</div>
+          <div class="target-grid" id="lv-cve-grid"></div>
+        </div>
+      </div>
+
+      <div class="submit-area">
+        <button class="submit-btn" id="lv-submit-btn" onclick="submitAction()" disabled>
+          ▶ SUBMIT ACTION
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Summary Overlay -->
+<div class="summary-overlay" id="r-summary-overlay">
+  <div class="summary-box">
+    <button class="sum-close" id="r-sum-close">✕ CLOSE</button>
+    <div class="sum-title" id="r-sum-title">—</div>
+    <div class="sum-sub" id="r-sum-sub">—</div>
+    <div class="sum-grid">
+      <div class="sum-stat"><div class="sum-stat-lbl">Total Turns</div><div class="sum-stat-val" id="r-sum-turns">—</div></div>
+      <div class="sum-stat"><div class="sum-stat-lbl">Winner</div><div class="sum-stat-val" id="r-sum-winner">—</div></div>
+      <div class="sum-stat"><div class="sum-stat-lbl">Red Score</div><div class="sum-stat-val" id="r-sum-red" style="color:var(--red)">—</div></div>
+      <div class="sum-stat"><div class="sum-stat-lbl">Blue Score</div><div class="sum-stat-val" id="r-sum-blue" style="color:var(--blue)">—</div></div>
+      <div class="sum-stat"><div class="sum-stat-lbl">Nodes Compromised</div><div class="sum-stat-val" id="r-sum-comp">—</div></div>
+      <div class="sum-stat"><div class="sum-stat-lbl">Total Exfil</div><div class="sum-stat-val" id="r-sum-exfil">—</div></div>
+    </div>
+    <div class="sum-events"><div class="sum-events-title">Key Events</div><div id="r-sum-events"></div></div>
+    <div class="sum-hint">Press <kbd>S</kbd> or <kbd>Esc</kbd> to close</div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════
+//  NODE POSITIONS
+// ══════════════════════════════════════════════════════
+const NODE_POSITIONS = {
+  internet:     {x:0.50,y:0.06}, dmz_web:{x:0.35,y:0.22}, dmz_mail:{x:0.65,y:0.22},
+  fw_internal:  {x:0.50,y:0.40}, workstation1:{x:0.20,y:0.60}, workstation2:{x:0.42,y:0.60},
+  db_server:    {x:0.63,y:0.60}, file_server:{x:0.30,y:0.80}, ad_server:{x:0.70,y:0.80},
+  corp_laptop:  {x:0.50,y:0.08}, it_server:{x:0.50,y:0.28}, historian:{x:0.25,y:0.46},
+  hmi:          {x:0.75,y:0.46}, dmz_firewall:{x:0.50,y:0.46}, plc_pump:{x:0.30,y:0.72}, plc_valve:{x:0.70,y:0.72},
+  public_api:   {x:0.50,y:0.10}, lambda_fn:{x:0.25,y:0.32}, ec2_app:{x:0.75,y:0.32},
+  rds_db:       {x:0.50,y:0.55}, s3_bucket:{x:0.20,y:0.75}, iam_role:{x:0.80,y:0.55}, vpc_endpoint:{x:0.50,y:0.75},
+  unclass_ws:   {x:0.50,y:0.08}, nipr_server:{x:0.50,y:0.28}, cross_domain:{x:0.50,y:0.46},
+  sipr_gateway: {x:0.50,y:0.62}, intel_db:{x:0.20,y:0.78}, mission_sys:{x:0.50,y:0.80},
+  scif_terminal:{x:0.80,y:0.92}, comms_node:{x:0.80,y:0.68},
+};
+const NODE_ICONS  = {router:'⬡',server:'▣',workstation:'◻',firewall:'◈',database:'◆',dmz:'◉'};
+const TYPE_COLORS = {router:'#f5a623',server:'#00d4ff',workstation:'#00ff88',firewall:'#ff9f43',database:'#ff2d55',dmz:'#a55eea'};
+
+// ══════════════════════════════════════════════════════
+//  GLOBAL STATE
+// ══════════════════════════════════════════════════════
+let GAME_DATA    = null;
+let scenarios    = {};
+let selScenario  = 'corporate';
+let currentTurn  = 0;
+let isPlaying    = false;
+let playTimer    = null;
+let svgW = 0, svgH = 0;
+let selNode      = null;
+
+const rSvg     = document.getElementById('r-svg');
+const rTooltip = document.getElementById('r-tooltip');
+
+// ══════════════════════════════════════════════════════
+//  SCREEN MANAGEMENT
+// ══════════════════════════════════════════════════════
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function goSetup() {
+  stopPlay();
+  showScreen('screen-setup');
+}
+
+// ══════════════════════════════════════════════════════
+//  SETUP: LOAD SCENARIOS
+// ══════════════════════════════════════════════════════
+async function loadScenarios() {
+  try {
+    const res = await fetch('/api/scenarios');
+    scenarios = await res.json();
+    renderScenarioCards();
+  } catch(e) {
+    document.getElementById('error-msg').textContent = 'Could not connect to server: ' + e.message;
+  }
+}
+
+function renderScenarioCards() {
+  const grid = document.getElementById('scenario-grid');
+  grid.innerHTML = '';
+  for (const [key, meta] of Object.entries(scenarios)) {
+    const card = document.createElement('div');
+    card.className = 'scenario-card' + (key === selScenario ? ' selected' : '');
+    card.dataset.key = key;
+    const diffClass = 'diff-' + (meta.difficulty || 'beginner').toLowerCase();
+    card.innerHTML = `
+      <div class="card-name">${meta.name}</div>
+      <div class="card-desc">${meta.description}</div>
+      <div class="card-meta">
+        <span class="card-tag ${diffClass}">${meta.difficulty}</span>
+        <span class="card-tag">${meta.nodes} nodes</span>
+      </div>`;
+    card.addEventListener('click', () => {
+      selScenario = key;
+      document.querySelectorAll('.scenario-card').forEach(c => c.classList.remove('selected'));
+      card.classList.add('selected');
+    });
+    grid.appendChild(card);
+  }
+}
+
+// ══════════════════════════════════════════════════════
+//  RUN SIMULATION
+// ══════════════════════════════════════════════════════
+async function runSimulation() {
+  const statusMsg = document.getElementById('loading-status');
+  document.getElementById('error-msg').textContent = '';
+  document.getElementById('run-btn').disabled = true;
+  document.getElementById('dl-btn').disabled = true;
+
+  showScreen('screen-loading');
+  statusMsg.textContent = 'Preparing simulation environment...';
+
+  const payload = {
+    scenario: selScenario,
+    red:   document.getElementById('cfg-red').value,
+    blue:  document.getElementById('cfg-blue').value,
+    turns: parseInt(document.getElementById('cfg-turns').value) || 20,
+    seed:  parseInt(document.getElementById('cfg-seed').value) || null,
+  };
+
+  try {
+    statusMsg.textContent = `Running ${payload.scenario} — ${payload.red} vs ${payload.blue}...`;
+    const res  = await fetch('/api/run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Server error');
+
+    GAME_DATA = data;
+    statusMsg.textContent = 'Rendering battle replay...';
+    showScreen('screen-replay');
+    await new Promise(r => setTimeout(r, 80)); // let browser lay out before reading SVG dimensions
+    initReplay();
+  } catch(e) {
+    showScreen('screen-setup');
+    document.getElementById('error-msg').textContent = '⚠ Error: ' + e.message;
+  } finally {
+    document.getElementById('run-btn').disabled = false;
+    document.getElementById('dl-btn').disabled  = false;
+  }
+}
+
+async function downloadReplay() {
+  document.getElementById('error-msg').textContent = '';
+  document.getElementById('run-btn').disabled = true;
+  document.getElementById('dl-btn').disabled = true;
+  showScreen('screen-loading');
+  document.getElementById('loading-status').textContent = 'Generating standalone replay file...';
+
+  const payload = {
+    scenario: selScenario,
+    red:   document.getElementById('cfg-red').value,
+    blue:  document.getElementById('cfg-blue').value,
+    turns: parseInt(document.getElementById('cfg-turns').value) || 20,
+    seed:  parseInt(document.getElementById('cfg-seed').value) || null,
+  };
+
+  try {
+    const res = await fetch('/api/replay', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Server error');
+    }
+    const blob = await res.blob();
+    const disp = res.headers.get('Content-Disposition') || '';
+    const fnMatch = disp.match(/filename="([^"]+)"/);
+    const filename = fnMatch ? fnMatch[1] : 'cyberwar_replay.html';
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showScreen('screen-setup');
+  } catch(e) {
+    showScreen('screen-setup');
+    document.getElementById('error-msg').textContent = '⚠ Error: ' + e.message;
+  } finally {
+    document.getElementById('run-btn').disabled = false;
+    document.getElementById('dl-btn').disabled  = false;
+  }
+}
+
+// ══════════════════════════════════════════════════════
+//  REPLAY INIT
+// ══════════════════════════════════════════════════════
+function initReplay() {
+  currentTurn = 0;
+  isPlaying   = false;
+  selNode     = null;
+
+  // Header
+  document.getElementById('r-scenario-name').textContent = GAME_DATA.scenario;
+  const wb = document.getElementById('r-winner-badge');
+  wb.textContent = (GAME_DATA.winner || 'blue').toUpperCase() + ' WINS';
+  wb.className = 'winner-badge ' + GAME_DATA.winner;
+
+  // Tabs
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const tab = btn.dataset.tab;
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('r-tab-' + tab).classList.add('active');
+    });
+  });
+
+  buildScoreChart();
+  buildTurnMarkers();
+  buildActionLog();
+  buildNodeGrid();
+  buildSummary();
+
+  // Resize + draw
+  const area = document.getElementById('r-canvas-area');
+  const resize = () => {
+    svgW = area.clientWidth;
+    svgH = area.clientHeight;
+    rSvg.setAttribute('width', svgW);
+    rSvg.setAttribute('height', svgH);
+    drawNetwork(currentTurn);
+  };
+  window.removeEventListener('resize', resize);
+  window.addEventListener('resize', resize);
+  resize();
+
+  // Scrubber
+  const track = document.getElementById('r-scrubber-track');
+  let dragging = false;
+  track.onmousedown = e => { dragging = true; handleScrub(e); };
+  window.onmousemove = e => { if (dragging) handleScrub(e); };
+  window.onmouseup  = () => { dragging = false; };
+
+  // Buttons
+  document.getElementById('r-btn-reset').onclick   = () => { stopPlay(); setTurn(0); };
+  document.getElementById('r-btn-prev').onclick    = () => { stopPlay(); setTurn(currentTurn - 1); };
+  document.getElementById('r-btn-play').onclick    = togglePlay;
+  document.getElementById('r-btn-next').onclick    = () => { stopPlay(); setTurn(currentTurn + 1); };
+  document.getElementById('r-btn-summary').onclick = showSummary;
+  document.getElementById('r-sum-close').onclick   = hideSummary;
+
+  // Keyboard
+  window.onkeydown = e => {
+    if (e.target.tagName === 'SELECT' || e.target.tagName === 'INPUT') return;
+    if (document.getElementById('screen-replay').classList.contains('active')) {
+      switch(e.key) {
+        case 'ArrowLeft':  e.preventDefault(); stopPlay(); setTurn(currentTurn - 1); break;
+        case 'ArrowRight': e.preventDefault(); stopPlay(); setTurn(currentTurn + 1); break;
+        case ' ':          e.preventDefault(); togglePlay(); break;
+        case 'r': case 'R': stopPlay(); setTurn(0); break;
+        case 's': case 'S':
+          document.getElementById('r-summary-overlay').classList.contains('visible')
+            ? hideSummary() : showSummary(); break;
+        case 'Escape': hideSummary(); break;
+      }
+    }
+  };
+
+  setTurn(0);
+}
+
+// ══════════════════════════════════════════════════════
+//  TURN MANAGEMENT
+// ══════════════════════════════════════════════════════
+function setTurn(t) {
+  currentTurn = Math.max(0, Math.min(GAME_DATA.total_turns, t));
+  const tot = GAME_DATA.total_turns;
+  const pct = tot > 0 ? (currentTurn / tot) * 100 : 0;
+  document.getElementById('r-scrubber-fill').style.width = pct + '%';
+  document.getElementById('r-scrubber-handle').style.left = pct + '%';
+  document.getElementById('r-turn-counter').textContent =
+    `T ${String(currentTurn).padStart(2,'0')} / ${String(tot).padStart(2,'0')}`;
+  drawNetwork(currentTurn);
+  updateScores(currentTurn);
+  updateNodeGrid(currentTurn);
+  highlightLog(currentTurn);
+  updateThreatBar(currentTurn);
+  updateStats(currentTurn);
+  buildIntel(currentTurn);
+}
+
+function togglePlay() { isPlaying ? stopPlay() : startPlay(); }
+function startPlay() {
+  isPlaying = true;
+  document.getElementById('r-btn-play').classList.add('active');
+  document.getElementById('r-btn-play').textContent = '⏸';
+  tick();
+}
+function stopPlay() {
+  isPlaying = false;
+  clearTimeout(playTimer);
+  const btn = document.getElementById('r-btn-play');
+  if (btn) { btn.classList.remove('active'); btn.textContent = '▶'; }
+}
+function tick() {
+  if (!isPlaying) return;
+  if (currentTurn >= GAME_DATA.total_turns) { stopPlay(); return; }
+  setTurn(currentTurn + 1);
+  const speed = parseInt(document.getElementById('r-speed-select').value);
+  playTimer = setTimeout(tick, speed);
+}
+function handleScrub(e) {
+  const track = document.getElementById('r-scrubber-track');
+  const rect  = track.getBoundingClientRect();
+  const pct   = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+  setTurn(Math.round(pct * GAME_DATA.total_turns));
+}
+
+// ══════════════════════════════════════════════════════
+//  THREAT BAR & STATS
+// ══════════════════════════════════════════════════════
+function getSnapshot(turn) {
+  return GAME_DATA.snapshots[Math.min(turn, GAME_DATA.snapshots.length - 1)];
+}
+function updateThreatBar(turn) {
+  const snap = getSnapshot(turn);
+  const total = GAME_DATA.nodes.length;
+  const comp = Object.values(snap).filter(n => n.compromised).length;
+  const pct = total ? Math.round((comp / total) * 100) : 0;
+  document.getElementById('r-threat-fill').style.width = pct + '%';
+  document.getElementById('r-threat-fill').style.background = pct < 25 ? 'var(--green)' : pct < 60 ? 'var(--amber)' : 'var(--red)';
+  document.getElementById('r-threat-pct').textContent = pct + '%';
+}
+function updateStats(turn) {
+  const snap = getSnapshot(turn);
+  const nodes = Object.values(snap);
+  const comp = nodes.filter(n => n.compromised).length;
+  const exfil = nodes.reduce((a,n) => a + n.data_exfil, 0);
+  const exfilPct = nodes.length ? Math.round((exfil / nodes.length) * 100) : 0;
+  let alerts = 0;
+  for (let i = 0; i < Math.min(turn, GAME_DATA.history.length); i++)
+    alerts += (GAME_DATA.history[i].alerts || []).length;
+  document.getElementById('r-stat-comp').textContent   = comp;
+  document.getElementById('r-stat-exfil').textContent  = exfilPct + '%';
+  document.getElementById('r-stat-alerts').textContent = alerts;
+}
+
+// ══════════════════════════════════════════════════════
+//  NETWORK DRAWING
+// ══════════════════════════════════════════════════════
+function mksvg(tag, attrs={}) {
+  const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  Object.entries(attrs).forEach(([k,v]) => el.setAttribute(k, v));
+  return el;
+}
+function npos(id) {
+  const p = NODE_POSITIONS[id];
+  return p ? { x: p.x * svgW, y: p.y * svgH } : { x: svgW/2, y: svgH/2 };
+}
+
+function drawNetwork(turn) {
+  if (!svgW || !svgH) return;
+  const snap = getSnapshot(turn);
+  const td   = turn > 0 ? GAME_DATA.history[turn - 1] : null;
+  while (rSvg.firstChild) rSvg.removeChild(rSvg.firstChild);
+
+  const defs = mksvg('defs');
+  ['red','blue','amber','green'].forEach(c => {
+    const f = mksvg('filter', {id:`glow-${c}`,x:'-50%',y:'-50%',width:'200%',height:'200%'});
+    const fe = mksvg('feGaussianBlur', {in:'SourceGraphic',stdDeviation:'4',result:'blur'});
+    const cm = mksvg('feColorMatrix', {in:'blur',type:'matrix',values:'0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 3 -1'});
+    f.appendChild(fe); f.appendChild(cm); defs.appendChild(f);
+  });
+  rSvg.appendChild(defs);
+
+  // Grid
+  const gg = mksvg('g', {opacity:'0.05'});
+  for (let x=0; x<svgW; x+=40) gg.appendChild(mksvg('line',{x1:x,y1:0,x2:x,y2:svgH,stroke:'#4a7090','stroke-width':'0.5'}));
+  for (let y=0; y<svgH; y+=40) gg.appendChild(mksvg('line',{x1:0,y1:y,x2:svgW,y2:y,stroke:'#4a7090','stroke-width':'0.5'}));
+  rSvg.appendChild(gg);
+
+  // Edges
+  GAME_DATA.edges.forEach(edge => {
+    const s = npos(edge.source), d = npos(edge.target);
+    const isRed  = td && (td.red_target===edge.target||td.red_target===edge.source)  && td.red_status==='success';
+    const isBlue = td && (td.blue_target===edge.target||td.blue_target===edge.source) && td.blue_status==='success';
+    const line = mksvg('line', {
+      x1:s.x,y1:s.y,x2:d.x,y2:d.y,
+      stroke: isRed ? '#ff2d55' : isBlue ? '#00d4ff' : edge.monitored ? '#2a5a70' : '#1a3a50',
+      'stroke-width': (isRed||isBlue) ? '2' : '1', opacity:'0.8'
+    });
+    if (isRed||isBlue) line.setAttribute('filter', isRed?'url(#glow-red)':'url(#glow-blue)');
+    rSvg.appendChild(line);
+    if (edge.monitored) {
+      const mid = mksvg('circle',{cx:(s.x+d.x)/2,cy:(s.y+d.y)/2,r:'3',fill:'#2a6a88',opacity:'0.7'});
+      rSvg.appendChild(mid);
+    }
+    // Exfil arc
+    const ss = snap[edge.source];
+    if (ss && ss.data_exfil > 0.1 && ss.compromised) {
+      rSvg.appendChild(mksvg('line',{x1:s.x,y1:s.y,x2:d.x,y2:d.y,stroke:'#ff2d55','stroke-width':(ss.data_exfil*3).toFixed(1),'stroke-dasharray':'4 8',opacity:'0.35'}));
+    }
+  });
+
+  // Nodes
+  GAME_DATA.nodes.forEach(node => {
+    const pos   = npos(node.id);
+    const state = snap[node.id] || {};
+    const color = TYPE_COLORS[node.type] || '#4a7090';
+    const g = mksvg('g', {style:'cursor:pointer'});
+
+    if (state.alert_level > 0) {
+      const ring = mksvg('circle',{cx:pos.x,cy:pos.y,r:22+state.alert_level*4,fill:'none',stroke:'#f5a623','stroke-width':'1',opacity:'0.3'});
+      ring.appendChild(mksvg('animate',{attributeName:'r',values:`${22+state.alert_level*4};${32+state.alert_level*4};${22+state.alert_level*4}`,dur:'1.5s',repeatCount:'indefinite'}));
+      ring.appendChild(mksvg('animate',{attributeName:'opacity',values:'0.3;0;0.3',dur:'1.5s',repeatCount:'indefinite'}));
+      g.appendChild(ring);
+    }
+    if (state.compromised) {
+      const halo = mksvg('circle',{cx:pos.x,cy:pos.y,r:20,fill:'#ff2d5511',stroke:'#ff2d55','stroke-width':'1',opacity:'0.6',filter:'url(#glow-red)'});
+      halo.appendChild(mksvg('animate',{attributeName:'opacity',values:'0.6;0.2;0.6',dur:'1.2s',repeatCount:'indefinite'}));
+      g.appendChild(halo);
+    }
+
+    const owner = state.owner || 'neutral';
+    const circ = mksvg('circle',{
+      cx:pos.x, cy:pos.y, r:state.honeypot?17:14,
+      fill: state.isolated ? '#1a2a3a' : state.compromised ? '#1a0008' : '#0a1820',
+      stroke: state.compromised ? '#ff2d55' : owner==='blue' ? '#00d4ff' : state.isolated ? '#4a7090' : state.honeypot ? '#f5a623' : color,
+      'stroke-width': (state.compromised||owner==='blue') ? '2' : '1.5',
+      filter: state.compromised ? 'url(#glow-red)' : owner==='blue' ? 'url(#glow-blue)' : ''
+    });
+    g.appendChild(circ);
+
+    const icon = mksvg('text',{x:pos.x,y:pos.y+1,'text-anchor':'middle','dominant-baseline':'middle','font-size':'11',fill:state.compromised?'#ff2d55':state.isolated?'#4a7090':color,'pointer-events':'none'});
+    icon.textContent = NODE_ICONS[node.type] || '◎';
+    g.appendChild(icon);
+
+    const lbl = mksvg('text',{x:pos.x,y:pos.y+22,'text-anchor':'middle','font-size':'9',fill:'#4a6a7a','font-family':"'Share Tech Mono',monospace",'pointer-events':'none'});
+    lbl.textContent = node.id;
+    g.appendChild(lbl);
+
+    g.addEventListener('mouseenter', e => showTooltip(e, node, state));
+    g.addEventListener('mouseleave', hideTooltip);
+    g.addEventListener('click', () => { selNode = node.id; buildIntel(currentTurn); switchTab('intel'); });
+    rSvg.appendChild(g);
+  });
+
+  // Flash rings on target
+  if (td) {
+    ['red','blue'].forEach(team => {
+      const t = team==='red' ? td.red_target : td.blue_target;
+      if (!t || !NODE_POSITIONS[t]) return;
+      const p = npos(t);
+      const fl = mksvg('circle',{cx:p.x,cy:p.y,r:14,fill:'none',stroke:team==='red'?'#ff2d55':'#00d4ff','stroke-width':'2',opacity:'0'});
+      fl.appendChild(mksvg('animate',{attributeName:'opacity',values:'0;0.8;0',dur:'0.6s',fill:'freeze'}));
+      fl.appendChild(mksvg('animate',{attributeName:'r',values:'14;30;40',dur:'0.6s',fill:'freeze'}));
+      rSvg.appendChild(fl);
+    });
+  }
+}
+
+// ══════════════════════════════════════════════════════
+//  TOOLTIP
+// ══════════════════════════════════════════════════════
+function showTooltip(e, node, state) {
+  document.getElementById('r-tt-title').textContent = node.label;
+  const rows = [
+    ['Type', node.type], ['Value', node.value],
+    ['Owner', state.owner||'—', state.owner==='red'?'red':state.owner==='blue'?'blue':''],
+    ['Comp', state.compromised?'YES':'no', state.compromised?'red':'green'],
+    ['Exfil', ((state.data_exfil||0)*100).toFixed(0)+'%'],
+    ['Alert', state.alert_level||0], ['Patch', state.patch_level||0],
+  ];
+  document.getElementById('r-tt-body').innerHTML = rows.map(([k,v,c='']) =>
+    `<div class="tt-row"><span class="tt-key">${k}</span><span class="tt-val ${c}">${v}</span></div>`).join('');
+  rTooltip.classList.add('visible');
+  moveTip(e);
+  rSvg.addEventListener('mousemove', moveTip);
+}
+function moveTip(e) {
+  const area = document.getElementById('r-canvas-area');
+  const rect = area.getBoundingClientRect();
+  let lx = e.clientX - rect.left + 14, ly = e.clientY - rect.top - 10;
+  if (lx + 240 > rect.width) lx -= 260;
+  rTooltip.style.left = lx + 'px';
+  rTooltip.style.top  = ly + 'px';
+}
+function hideTooltip() {
+  rTooltip.classList.remove('visible');
+  rSvg.removeEventListener('mousemove', moveTip);
+}
+
+// ══════════════════════════════════════════════════════
+//  SCORE CHART
+// ══════════════════════════════════════════════════════
+function buildScoreChart() {
+  const el = document.getElementById('r-score-chart');
+  const W=302, H=110, P={t:8,r:10,b:22,l:28};
+  el.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  el.setAttribute('preserveAspectRatio', 'none');
+  const hist = GAME_DATA.history;
+  if (!hist.length) return;
+  const maxS = Math.max(...hist.map(h => Math.max(h.red_score||0, h.blue_score||0)), 1);
+  const iW = W-P.l-P.r, iH = H-P.t-P.b;
+  el.innerHTML = `<rect width="${W}" height="${H}" fill="#0a1820"/>`;
+  [0,0.25,0.5,0.75,1].forEach(f => {
+    const y = P.t + iH*(1-f);
+    el.innerHTML += `<line x1="${P.l}" y1="${y}" x2="${W-P.r}" y2="${y}" stroke="#1a3a50" stroke-width="0.5"/>
+      <text x="${P.l-4}" y="${y+3}" fill="#4a6a7a" font-size="7" text-anchor="end" font-family="monospace">${Math.round(f*maxS)}</text>`;
+  });
+  el.innerHTML += `<text x="${W/2}" y="${H-4}" fill="#4a6a7a" font-size="7" text-anchor="middle" font-family="monospace">Turn</text>`;
+  const xOf = i => P.l + (i/(hist.length-1||1)) * iW;
+  const yOf = v => P.t + iH*(1-Math.min(v/maxS,1));
+
+  let rp = `M${xOf(0)},${P.t+iH}`;
+  hist.forEach((h,i) => { rp += ` L${xOf(i)},${yOf(h.red_score||0)}`; });
+  el.innerHTML += `<path d="${rp} L${xOf(hist.length-1)},${P.t+iH} Z" fill="#ff2d5511"/>`;
+
+  let bp = `M${xOf(0)},${P.t+iH}`;
+  hist.forEach((h,i) => { bp += ` L${xOf(i)},${yOf(h.blue_score||0)}`; });
+  el.innerHTML += `<path d="${bp} L${xOf(hist.length-1)},${P.t+iH} Z" fill="#00d4ff11"/>`;
+
+  el.innerHTML += `<polyline points="${hist.map((h,i)=>`${xOf(i)},${yOf(h.red_score||0)}`).join(' ')}" fill="none" stroke="#ff2d55" stroke-width="1.5"/>`;
+  el.innerHTML += `<polyline points="${hist.map((h,i)=>`${xOf(i)},${yOf(h.blue_score||0)}`).join(' ')}" fill="none" stroke="#00d4ff" stroke-width="1.5"/>`;
+  el.innerHTML += `<circle id="r-cdot-red" r="3" fill="#ff2d55" cx="${xOf(0)}" cy="${yOf(0)}"/>`;
+  el.innerHTML += `<circle id="r-cdot-blue" r="3" fill="#00d4ff" cx="${xOf(0)}" cy="${yOf(0)}"/>`;
+}
+
+function updateScores(turn) {
+  const t = Math.min(turn-1, GAME_DATA.history.length-1);
+  const rS = t>=0 ? (GAME_DATA.history[t].red_score||0) : 0;
+  const bS = t>=0 ? (GAME_DATA.history[t].blue_score||0) : 0;
+  document.getElementById('r-score-red').textContent  = rS.toFixed(1);
+  document.getElementById('r-score-blue').textContent = bS.toFixed(1);
+  const hist = GAME_DATA.history;
+  if (hist.length < 2 || t < 0) return;
+  const W=302,H=110,P={t:8,r:10,b:22,l:28};
+  const iW=W-P.l-P.r, iH=H-P.t-P.b;
+  const maxS = Math.max(...hist.map(h=>Math.max(h.red_score||0,h.blue_score||0)),1);
+  const idx = Math.max(0,Math.min(t,hist.length-1));
+  const xOf = i => P.l + (i/(hist.length-1||1))*iW;
+  const yOf = v => P.t + iH*(1-Math.min(v/maxS,1));
+  const dr = document.getElementById('r-cdot-red');
+  const db = document.getElementById('r-cdot-blue');
+  if (dr) { dr.setAttribute('cx', xOf(idx)); dr.setAttribute('cy', yOf(hist[idx].red_score||0)); }
+  if (db) { db.setAttribute('cx', xOf(idx)); db.setAttribute('cy', yOf(hist[idx].blue_score||0)); }
+}
+
+// ══════════════════════════════════════════════════════
+//  TURN MARKERS
+// ══════════════════════════════════════════════════════
+function buildTurnMarkers() {
+  const c = document.getElementById('r-turn-markers');
+  c.innerHTML = '';
+  GAME_DATA.history.forEach((h, i) => {
+    const pct = GAME_DATA.total_turns > 0 ? ((i+1)/GAME_DATA.total_turns)*100 : 0;
+    const m = document.createElement('div');
+    m.className = 'turn-marker';
+    m.style.left = pct + '%';
+    c.appendChild(m);
+  });
+}
+
+// ══════════════════════════════════════════════════════
+//  ACTION LOG
+// ══════════════════════════════════════════════════════
+function buildActionLog() {
+  const log = document.getElementById('r-action-log');
+  log.innerHTML = '';
+  GAME_DATA.history.forEach(h => {
+    const entry = document.createElement('div');
+    entry.className = 'log-entry';
+    entry.dataset.turn = h.turn;
+    const rd = h.red_reward>=0 ? `+${h.red_reward.toFixed(1)}` : h.red_reward.toFixed(1);
+    const bd = h.blue_reward>=0 ? `+${h.blue_reward.toFixed(1)}` : h.blue_reward.toFixed(1);
+    const alerts = (h.alerts||[]).map(a=>`<div class="log-alert">⚠ ${a}</div>`).join('');
+    entry.innerHTML = `
+      <div class="log-turn">TURN ${String(h.turn).padStart(2,'0')}</div>
+      <div><span class="log-red">⚔ ${h.red_action_type.toUpperCase()}</span>
+           <span style="color:var(--text-dim)"> → ${h.red_target||'—'}</span>
+           <span class="log-status-${h.red_status}" style="float:right">${h.red_status}</span></div>
+      <div class="log-msg">${h.red_msg||''}</div>
+      <div class="log-delta ${h.red_reward>=0?'pos':'neg'}">RED Δ ${rd} → ${h.red_score.toFixed(1)}</div>
+      <div><span class="log-blue">🛡 ${h.blue_action_type.toUpperCase()}</span>
+           <span style="color:var(--text-dim)"> → ${h.blue_target||'—'}</span>
+           <span class="log-status-${h.blue_status}" style="float:right">${h.blue_status}</span></div>
+      <div class="log-msg">${h.blue_msg||''}</div>
+      <div class="log-delta ${h.blue_reward>=0?'pos':'neg'}">BLU Δ ${bd} → ${h.blue_score.toFixed(1)}</div>
+      ${alerts}`;
+    entry.addEventListener('click', () => { stopPlay(); setTurn(h.turn); });
+    log.appendChild(entry);
+  });
+}
+function highlightLog(turn) {
+  document.querySelectorAll('#r-action-log .log-entry').forEach(e => {
+    e.classList.toggle('active', parseInt(e.dataset.turn) === turn);
+  });
+  const active = document.querySelector('#r-action-log .log-entry.active');
+  if (active) active.scrollIntoView({ block: 'nearest' });
+}
+
+// ══════════════════════════════════════════════════════
+//  NODE GRID
+// ══════════════════════════════════════════════════════
+function buildNodeGrid() {
+  const grid = document.getElementById('r-node-grid');
+  grid.innerHTML = '';
+  GAME_DATA.nodes.forEach(node => {
+    const chip = document.createElement('div');
+    chip.className = 'node-chip';
+    chip.id = 'rchip-' + node.id;
+    chip.innerHTML = `<div class="node-chip-alert"></div>
+      <div class="node-chip-name">${node.id}</div>
+      <div class="node-chip-owner neutral" id="rchip-ow-${node.id}">—</div>
+      <div class="exfil-bar" id="rchip-ex-${node.id}" style="width:0%"></div>`;
+    chip.addEventListener('click', () => { selNode = node.id; buildIntel(currentTurn); switchTab('intel'); });
+    grid.appendChild(chip);
+  });
+  updateNodeGrid(0);
+}
+function updateNodeGrid(turn) {
+  const snap = getSnapshot(turn);
+  GAME_DATA.nodes.forEach(node => {
+    const s = snap[node.id] || {};
+    const chip = document.getElementById('rchip-' + node.id);
+    const ow   = document.getElementById('rchip-ow-' + node.id);
+    const ex   = document.getElementById('rchip-ex-' + node.id);
+    if (!chip) return;
+    chip.className = 'node-chip' +
+      (s.compromised  ? ' compromised'  : '') +
+      (s.isolated     ? ' isolated'     : '') +
+      (s.honeypot     ? ' honeypot'     : '') +
+      (s.alert_level>0 ? ' alert-active' : '');
+    ow.className = 'node-chip-owner ' + (s.owner || 'neutral');
+    ow.textContent = s.compromised ? '⚠ COMP' : (s.owner || '—').toUpperCase();
+    ex.style.width = Math.min((s.data_exfil||0)*100, 100) + '%';
+  });
+}
+
+// ══════════════════════════════════════════════════════
+//  INTEL PANE
+// ══════════════════════════════════════════════════════
+function buildIntel(turn) {
+  const pane = document.getElementById('r-intel-pane');
+  const snap = getSnapshot(turn);
+  const t = Math.min(turn-1, GAME_DATA.history.length-1);
+  const rS = t>=0 ? GAME_DATA.history[t].red_score : 0;
+  const bS = t>=0 ? GAME_DATA.history[t].blue_score : 0;
+
+  let html = `<div class="intel-group">
+    <div class="intel-group-title">Game State</div>
+    ${irow('Scenario', GAME_DATA.scenario)}
+    ${irow('Turn', `${turn} / ${GAME_DATA.total_turns}`)}
+    ${irow('Red Score', rS.toFixed(1), 'red')}
+    ${irow('Blue Score', bS.toFixed(1), 'blue')}
+    ${irow('Winner', GAME_DATA.winner.toUpperCase(), GAME_DATA.winner)}
+  </div>`;
+
+  if (selNode && snap[selNode]) {
+    const node = GAME_DATA.nodes.find(n => n.id === selNode);
+    const s = snap[selNode];
+    html += `<div class="intel-group">
+      <div class="intel-group-title">Node: ${selNode}</div>
+      ${irow('Label', node ? node.label : selNode)}
+      ${irow('Type', node ? node.type : '—')}
+      ${irow('Value', node ? node.value : '—', 'amber')}
+      ${irow('Owner', s.owner||'—', s.owner)}
+      ${irow('Compromised', s.compromised?'YES':'no', s.compromised?'red':'green')}
+      ${irow('Exfil', ((s.data_exfil||0)*100).toFixed(0)+'%', s.data_exfil>0?'red':'')}
+      ${irow('Alert Lv', s.alert_level||0)}
+      ${irow('Patch Lv', s.patch_level||0)}`;
+    if (node && node.vulnerabilities && node.vulnerabilities.length) {
+      html += `<div class="intel-row"><span class="intel-key">CVEs</span><span class="intel-val" style="flex-wrap:wrap;justify-content:flex-end">
+        ${node.vulnerabilities.map(v=>`<span class="vuln-chip">${v.cve}</span>`).join('')}</span></div>`;
+    }
+    html += `</div>`;
+  } else {
+    const nodes = Object.entries(snap);
+    const comp = nodes.filter(([,s])=>s.compromised).length;
+    const exfil = nodes.reduce((a,[,s])=>a+s.data_exfil,0);
+    html += `<div class="intel-group">
+      <div class="intel-group-title">Network Status</div>
+      ${irow('Total Nodes', GAME_DATA.nodes.length)}
+      ${irow('Compromised', comp, comp>0?'red':'green')}
+      ${irow('Exfil', (exfil*100).toFixed(1)+'%', exfil>0?'red':'')}
+    </div>
+    <div style="font-size:9px;color:var(--text-dim);padding:8px;text-align:center">Click a node for details</div>`;
+  }
+  pane.innerHTML = html;
+}
+function irow(k,v,c='') {
+  return `<div class="intel-row"><span class="intel-key">${k}</span><span class="intel-val ${c}">${v}</span></div>`;
+}
+function switchTab(name) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab===name));
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.toggle('active', p.id==='r-tab-'+name));
+}
+
+// ══════════════════════════════════════════════════════
+//  BATTLE SUMMARY
+// ══════════════════════════════════════════════════════
+function buildSummary() {
+  const last = GAME_DATA.history[GAME_DATA.history.length-1] || {};
+  const winner = GAME_DATA.winner || 'blue';
+  document.getElementById('r-sum-title').textContent = winner.toUpperCase() + ' TEAM WINS';
+  document.getElementById('r-sum-title').className = 'sum-title ' + winner;
+  document.getElementById('r-sum-sub').textContent = GAME_DATA.scenario + '  ·  ' + GAME_DATA.total_turns + ' turns';
+  document.getElementById('r-sum-turns').textContent = GAME_DATA.total_turns;
+  document.getElementById('r-sum-winner').textContent = winner.toUpperCase();
+  document.getElementById('r-sum-red').textContent  = (last.red_score||0).toFixed(1);
+  document.getElementById('r-sum-blue').textContent = (last.blue_score||0).toFixed(1);
+  if (GAME_DATA.snapshots.length) {
+    const sn = GAME_DATA.snapshots[GAME_DATA.snapshots.length-1];
+    const ns = Object.values(sn);
+    const comp  = ns.filter(n=>n.compromised).length;
+    const exfil = ns.reduce((a,n)=>a+n.data_exfil,0);
+    document.getElementById('r-sum-comp').textContent  = comp + ' / ' + ns.length;
+    document.getElementById('r-sum-exfil').textContent = (exfil*100).toFixed(1) + '%';
+  }
+  const events = [];
+  GAME_DATA.history.forEach(h => {
+    if (h.red_status==='success'&&h.red_action_type==='exploit')
+      events.push(`<div class="sum-event"><span class="eturn">T${h.turn}</span> ⚔ Red exploited <b>${h.red_target}</b></div>`);
+    if (h.red_status==='success'&&h.red_action_type==='exfiltrate')
+      events.push(`<div class="sum-event"><span class="eturn">T${h.turn}</span> ⚔ Red exfiltrated from <b>${h.red_target}</b></div>`);
+    if (h.blue_status==='success'&&h.blue_action_type==='patch')
+      events.push(`<div class="sum-event"><span class="eturn">T${h.turn}</span> 🛡 Blue patched <b>${h.blue_target}</b></div>`);
+    if ((h.alerts||[]).length)
+      events.push(`<div class="sum-event"><span class="eturn">T${h.turn}</span> ⚠ ${h.alerts.length} alert(s)</div>`);
+  });
+  document.getElementById('r-sum-events').innerHTML = events.slice(0,10).join('')||'<div class="sum-event">No significant events</div>';
+}
+function showSummary() { document.getElementById('r-summary-overlay').classList.add('visible'); }
+function hideSummary() { document.getElementById('r-summary-overlay').classList.remove('visible'); }
+
+// ══════════════════════════════════════════════════════
+//  BOOT
+// ══════════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', () => {
+  loadScenarios();
+});
+
+// ══════════════════════════════════════════════════════
+//  LAUNCH HANDLER  (AI replay OR live human game)
+// ══════════════════════════════════════════════════════
+function handleLaunch() {
+  const humanTeam = document.getElementById('cfg-human-team').value;
+  if (humanTeam) { startLiveGame(); } else { runSimulation(); }
+}
+
+// ══════════════════════════════════════════════════════
+//  LIVE GAME STATE
+// ══════════════════════════════════════════════════════
+const LV = {
+  sessionId:   null,
+  humanTeam:   null,
+  maxTurns:    20,
+  turn:        0,
+  done:        false,
+  nodes:       [],   // metadata from server [{id,label,type,value,vulnerabilities}]
+  edges:       [],   // [{source,target}]
+  snapshot:    {},   // current node states
+  observation: null, // partial obs for human player
+  actions:     [],   // available actions list
+  selAction:   null, // selected action object
+  selTarget:   null, // selected target {node, from?}
+  selCve:      null, // selected CVE string
+  svgW: 0, svgH: 0,
+};
+
+// ══════════════════════════════════════════════════════
+//  START LIVE GAME
+// ══════════════════════════════════════════════════════
+async function startLiveGame() {
+  document.getElementById('error-msg').textContent = '';
+  document.getElementById('run-btn').disabled = true;
+  document.getElementById('dl-btn').disabled  = true;
+  showScreen('screen-loading');
+  document.getElementById('loading-status').textContent = 'Starting live game...';
+
+  const payload = {
+    scenario:   selScenario,
+    human_team: document.getElementById('cfg-human-team').value,
+    ai:         document.getElementById('cfg-ai').value,
+    turns:      parseInt(document.getElementById('cfg-turns').value) || 20,
+    seed:       parseInt(document.getElementById('cfg-seed').value) || null,
+  };
+
+  try {
+    const res  = await fetch('/api/game/new', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Server error');
+    showScreen('screen-live');
+    await new Promise(r => setTimeout(r, 80)); // let browser lay out before reading SVG dimensions
+    initLiveGame(data);
+  } catch(e) {
+    showScreen('screen-setup');
+    document.getElementById('error-msg').textContent = '⚠ Error: ' + e.message;
+  } finally {
+    document.getElementById('run-btn').disabled = false;
+    document.getElementById('dl-btn').disabled  = false;
+  }
+}
+
+// ══════════════════════════════════════════════════════
+//  INIT LIVE GAME
+// ══════════════════════════════════════════════════════
+function initLiveGame(data) {
+  LV.sessionId   = data.session_id;
+  LV.humanTeam   = data.human_team;
+  LV.maxTurns    = data.max_turns || 20;
+  LV.turn        = data.turn || 0;
+  LV.done        = data.done || false;
+  LV.nodes       = data.nodes  || [];
+  LV.edges       = data.edges  || [];
+  LV.snapshot    = data.snapshot    || {};
+  LV.observation = data.observation || null;
+  LV.actions     = data.available_actions || [];
+  LV.selAction   = null;
+  LV.selTarget   = null;
+  LV.selCve      = null;
+
+  // Header badges
+  const badge = document.getElementById('lv-team-badge');
+  badge.textContent = LV.humanTeam.toUpperCase();
+  badge.className   = 'lv-team-badge ' + LV.humanTeam;
+
+  document.getElementById('lv-scenario-name').textContent = data.scenario || selScenario;
+
+  // Hide game-over banner
+  document.getElementById('lv-go-banner').classList.remove('visible');
+
+  // Clear last result
+  document.getElementById('lv-last-result').innerHTML =
+    '<div style="color:var(--text-dim);font-size:9px;">Waiting for first action...</div>';
+
+  lvUpdateHeader();
+  lvRenderActions();
+
+  // Setup SVG canvas
+  const area = document.getElementById('lv-canvas-area');
+  const lvResize = () => {
+    LV.svgW = area.clientWidth;
+    LV.svgH = area.clientHeight;
+    const svg = document.getElementById('lv-svg');
+    svg.setAttribute('width',  LV.svgW);
+    svg.setAttribute('height', LV.svgH);
+    lvDrawNetwork(null);
+  };
+  window._lvResizeFn = lvResize;
+  window.removeEventListener('resize', window._lvResizeFn);
+  window.addEventListener('resize', window._lvResizeFn);
+  lvResize();
+
+  lvSetStatus('Your turn');
+}
+
+// ══════════════════════════════════════════════════════
+//  HEADER + STATUS
+// ══════════════════════════════════════════════════════
+function lvUpdateHeader() {
+  // scores from snapshot
+  let redScore = 0, blueScore = 0;
+  // try to read from last result if we have it
+  document.getElementById('lv-turn-ctr').textContent =
+    `T ${String(LV.turn).padStart(2,'0')} / ${String(LV.maxTurns).padStart(2,'0')}`;
+}
+
+function lvSetStatus(msg, cls='waiting') {
+  const el = document.getElementById('lv-status');
+  el.textContent = msg;
+  el.className = 'lv-status ' + cls;
+}
+
+// ══════════════════════════════════════════════════════
+//  ACTION RENDERER
+// ══════════════════════════════════════════════════════
+function lvRenderActions() {
+  const list = document.getElementById('lv-action-list');
+  list.innerHTML = '';
+  // Hide sub-selectors
+  document.getElementById('lv-target-sel').classList.remove('visible');
+  document.getElementById('lv-cve-sel').classList.remove('visible');
+
+  LV.actions.forEach(action => {
+    const btn = document.createElement('button');
+    btn.className = 'action-btn';
+    btn.dataset.actionType = action.action_type;
+    btn.innerHTML = `<div class="action-btn-label">${action.label}</div>
+      <div class="action-btn-desc">${action.description}</div>`;
+    btn.addEventListener('click', () => selectAction(action, btn));
+    list.appendChild(btn);
+  });
+
+  document.getElementById('lv-submit-btn').disabled = true;
+}
+
+// ══════════════════════════════════════════════════════
+//  ACTION SELECTION
+// ══════════════════════════════════════════════════════
+function selectAction(action, btnEl) {
+  // Deselect all
+  document.querySelectorAll('#lv-action-list .action-btn').forEach(b => b.classList.remove('selected'));
+  btnEl.classList.add('selected');
+
+  LV.selAction = action;
+  LV.selTarget = null;
+  LV.selCve    = null;
+
+  // Hide sub-selectors first
+  document.getElementById('lv-target-sel').classList.remove('visible');
+  document.getElementById('lv-cve-sel').classList.remove('visible');
+  document.getElementById('lv-target-grid').innerHTML = '';
+  document.getElementById('lv-cve-grid').innerHTML    = '';
+
+  // Pass action — no target needed
+  if (!action.needs_target) {
+    checkSubmitReady();
+    return;
+  }
+
+  // Target selector
+  const targets = action.targets || [];
+  const targetLbl = document.getElementById('lv-target-lbl');
+  targetLbl.textContent = action.needs_from ? 'Select Pivot (From → To)' : 'Select Target Node';
+
+  const targetGrid = document.getElementById('lv-target-grid');
+  targets.forEach(t => {
+    const chip = document.createElement('div');
+    chip.className = 'target-chip';
+    chip.textContent = t.label || t.node;
+    chip.addEventListener('click', () => {
+      document.querySelectorAll('#lv-target-grid .target-chip').forEach(c => c.classList.remove('selected'));
+      chip.classList.add('selected');
+      LV.selTarget = t;
+      LV.selCve    = null;
+      // Show CVE selector if needed
+      if (action.needs_cve && action.cve_options && action.cve_options.length) {
+        const cveGrid = document.getElementById('lv-cve-grid');
+        cveGrid.innerHTML = '';
+        action.cve_options.forEach(cve => {
+          const cc = document.createElement('div');
+          cc.className = 'target-chip';
+          cc.textContent = cve;
+          cc.addEventListener('click', () => {
+            document.querySelectorAll('#lv-cve-grid .target-chip').forEach(x => x.classList.remove('selected'));
+            cc.classList.add('selected');
+            LV.selCve = cve;
+            checkSubmitReady();
+          });
+          cveGrid.appendChild(cc);
+        });
+        document.getElementById('lv-cve-sel').classList.add('visible');
+      }
+      checkSubmitReady();
+    });
+    targetGrid.appendChild(chip);
+    // Highlight node on map
+    chip.addEventListener('mouseenter', () => lvDrawNetwork(t.node));
+    chip.addEventListener('mouseleave', () => lvDrawNetwork(null));
+  });
+  document.getElementById('lv-target-sel').classList.add('visible');
+
+  checkSubmitReady();
+}
+
+// ══════════════════════════════════════════════════════
+//  SUBMIT READINESS CHECK
+// ══════════════════════════════════════════════════════
+function checkSubmitReady() {
+  if (!LV.selAction) { document.getElementById('lv-submit-btn').disabled = true; return; }
+  const a = LV.selAction;
+  if (!a.needs_target) { document.getElementById('lv-submit-btn').disabled = false; return; }
+  if (!LV.selTarget)   { document.getElementById('lv-submit-btn').disabled = true;  return; }
+  if (a.needs_cve && !LV.selCve) { document.getElementById('lv-submit-btn').disabled = true; return; }
+  document.getElementById('lv-submit-btn').disabled = false;
+}
+
+// ══════════════════════════════════════════════════════
+//  SUBMIT ACTION
+// ══════════════════════════════════════════════════════
+async function submitAction() {
+  if (!LV.selAction) return;
+  document.getElementById('lv-submit-btn').disabled = true;
+  lvSetStatus('AI thinking...', 'thinking');
+
+  const payload = {
+    session_id:  LV.sessionId,
+    action_type: LV.selAction.action_type,
+    target:      LV.selTarget ? LV.selTarget.node : null,
+    from_node:   LV.selTarget ? (LV.selTarget.from || null) : null,
+    cve:         LV.selCve || null,
+  };
+
+  try {
+    const res  = await fetch('/api/game/action', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Server error');
+    lvApplyResult(data);
+  } catch(e) {
+    lvSetStatus('Error: ' + e.message, 'waiting');
+    document.getElementById('lv-submit-btn').disabled = false;
+  }
+}
+
+// ══════════════════════════════════════════════════════
+//  APPLY TURN RESULT
+// ══════════════════════════════════════════════════════
+function lvApplyResult(data) {
+  LV.turn        = data.turn        || LV.turn + 1;
+  LV.done        = data.done        || false;
+  LV.snapshot    = data.snapshot    || LV.snapshot;
+  LV.observation = data.observation || LV.observation;
+  LV.actions     = data.available_actions || [];
+
+  // Update scores
+  const rec = data.last_record;
+  if (rec) {
+    document.getElementById('lv-sc-red').textContent  = (rec.red_score  || 0).toFixed(1);
+    document.getElementById('lv-sc-blue').textContent = (rec.blue_score || 0).toFixed(1);
+    document.getElementById('lv-score-red').textContent  = (rec.red_score  || 0).toFixed(1);
+    document.getElementById('lv-score-blue').textContent = (rec.blue_score || 0).toFixed(1);
+    lvUpdateLastResult(rec);
+  }
+
+  lvUpdateHeader();
+  lvDrawNetwork(null);
+
+  if (LV.done) {
+    lvShowGameOver(data.winner || 'blue');
+    return;
+  }
+
+  LV.selAction = null;
+  LV.selTarget = null;
+  LV.selCve    = null;
+  lvRenderActions();
+  lvSetStatus('Your turn');
+}
+
+// ══════════════════════════════════════════════════════
+//  LAST RESULT PANEL
+// ══════════════════════════════════════════════════════
+function lvUpdateLastResult(rec) {
+  const human  = LV.humanTeam;
+  const ai     = human === 'red' ? 'blue' : 'red';
+  const humAct = human === 'red' ? rec.red_action_type   : rec.blue_action_type;
+  const humTgt = human === 'red' ? rec.red_target        : rec.blue_target;
+  const humSt  = human === 'red' ? rec.red_status        : rec.blue_status;
+  const humMsg = human === 'red' ? rec.red_msg           : rec.blue_msg;
+  const humRew = human === 'red' ? rec.red_reward        : rec.blue_reward;
+  const aiAct  = human === 'red' ? rec.blue_action_type  : rec.red_action_type;
+  const aiTgt  = human === 'red' ? rec.blue_target       : rec.red_target;
+  const aiSt   = human === 'red' ? rec.blue_status       : rec.red_status;
+  const aiMsg  = human === 'red' ? rec.blue_msg          : rec.red_msg;
+
+  const alerts = (rec.alerts || []).map(a =>
+    `<div class="result-alert">⚠ ${a}</div>`).join('');
+
+  const rewFmt = humRew >= 0 ? `+${humRew.toFixed(1)}` : humRew.toFixed(1);
+  document.getElementById('lv-last-result').innerHTML = `
+    <div class="result-turn">TURN ${String(rec.turn).padStart(2,'0')}</div>
+    <div class="result-${human}">
+      You: ${(humAct||'—').toUpperCase()} → ${humTgt||'—'}
+      <span style="float:right;color:${humSt==='success'?'var(--green)':humSt==='failure'?'#aa3344':'var(--amber)'}">
+        ${humSt||'—'}
+      </span>
+    </div>
+    <div class="result-msg">${humMsg||''}</div>
+    <div class="result-msg" style="color:${humRew>=0?'var(--green)':'var(--red)'}">Score Δ ${rewFmt}</div>
+    <div class="result-${ai}" style="margin-top:6px">
+      AI: ${(aiAct||'—').toUpperCase()} → ${aiTgt||'—'}
+      <span style="float:right;color:${aiSt==='success'?'var(--green)':aiSt==='failure'?'#aa3344':'var(--amber)'}">
+        ${aiSt||'—'}
+      </span>
+    </div>
+    <div class="result-msg">${aiMsg||''}</div>
+    ${alerts}`;
+}
+
+// ══════════════════════════════════════════════════════
+//  GAME OVER
+// ══════════════════════════════════════════════════════
+function lvShowGameOver(winner) {
+  const banner = document.getElementById('lv-go-banner');
+  const title  = document.getElementById('lv-go-title');
+  const sub    = document.getElementById('lv-go-sub');
+  const youWon = winner === LV.humanTeam;
+  title.textContent = youWon ? 'VICTORY' : 'DEFEAT';
+  title.className   = 'go-title ' + winner;
+  sub.textContent   = winner.toUpperCase() + ' TEAM WINS  ·  ' + LV.turn + ' turns';
+  banner.classList.add('visible');
+  lvSetStatus('Game Over', '');
+}
+
+// ══════════════════════════════════════════════════════
+//  LIVE NETWORK DRAW
+// ══════════════════════════════════════════════════════
+function lvDrawNetwork(highlightNode) {
+  const svg = document.getElementById('lv-svg');
+  if (!LV.svgW || !LV.svgH) return;
+  while (svg.firstChild) svg.removeChild(svg.firstChild);
+
+  const W = LV.svgW, H = LV.svgH;
+
+  // Defs
+  const defs = mksvg('defs');
+  ['red','blue','amber','green'].forEach(c => {
+    const f  = mksvg('filter', {id:`lvglow-${c}`,x:'-50%',y:'-50%',width:'200%',height:'200%'});
+    const fe = mksvg('feGaussianBlur', {in:'SourceGraphic',stdDeviation:'4',result:'blur'});
+    f.appendChild(fe); defs.appendChild(f);
+  });
+  svg.appendChild(defs);
+
+  // Grid
+  const gg = mksvg('g', {opacity:'0.04'});
+  for (let x=0; x<W; x+=40) gg.appendChild(mksvg('line',{x1:x,y1:0,x2:x,y2:H,stroke:'#4a7090','stroke-width':'0.5'}));
+  for (let y=0; y<H; y+=40) gg.appendChild(mksvg('line',{x1:0,y1:y,x2:W,y2:y,stroke:'#4a7090','stroke-width':'0.5'}));
+  svg.appendChild(gg);
+
+  // Determine visible nodes (fog of war)
+  const visibleIds = new Set();
+  if (LV.observation && LV.observation.visible_nodes) {
+    Object.keys(LV.observation.visible_nodes).forEach(id => visibleIds.add(id));
+  } else {
+    LV.nodes.forEach(n => visibleIds.add(n.id));
+  }
+
+  // Helper for position
+  function lpos(id) {
+    const p = NODE_POSITIONS[id];
+    return p ? {x: p.x * W, y: p.y * H} : {x: W/2, y: H/2};
+  }
+
+  // Edges
+  LV.edges.forEach(edge => {
+    const s = lpos(edge.source), d = lpos(edge.target);
+    const inFog = !visibleIds.has(edge.source) || !visibleIds.has(edge.target);
+    const line = mksvg('line', {
+      x1:s.x,y1:s.y,x2:d.x,y2:d.y,
+      stroke: inFog ? '#1a3a50' : '#1a4a60',
+      'stroke-width': '1',
+      opacity: inFog ? '0.2' : '0.7',
+    });
+    svg.appendChild(line);
+  });
+
+  // Nodes
+  LV.nodes.forEach(node => {
+    const pos     = lpos(node.id);
+    const state   = LV.snapshot[node.id] || {};
+    const visible = visibleIds.has(node.id);
+    const fogOp   = visible ? '1' : '0.18';
+    const color   = TYPE_COLORS[node.type] || '#4a7090';
+    const isHL    = node.id === highlightNode;
+    const g = mksvg('g', {style:`cursor:pointer;opacity:${fogOp}`});
+
+    if (state.alert_level > 0 && visible) {
+      const ring = mksvg('circle',{cx:pos.x,cy:pos.y,r:22+state.alert_level*4,fill:'none',stroke:'#f5a623','stroke-width':'1',opacity:'0.3'});
+      ring.appendChild(mksvg('animate',{attributeName:'r',values:`${22+state.alert_level*4};${32+state.alert_level*4};${22+state.alert_level*4}`,dur:'1.5s',repeatCount:'indefinite'}));
+      ring.appendChild(mksvg('animate',{attributeName:'opacity',values:'0.3;0;0.3',dur:'1.5s',repeatCount:'indefinite'}));
+      g.appendChild(ring);
+    }
+    if (state.compromised && visible) {
+      const halo = mksvg('circle',{cx:pos.x,cy:pos.y,r:20,fill:'#ff2d5511',stroke:'#ff2d55','stroke-width':'1',opacity:'0.6',filter:'url(#lvglow-red)'});
+      halo.appendChild(mksvg('animate',{attributeName:'opacity',values:'0.6;0.2;0.6',dur:'1.2s',repeatCount:'indefinite'}));
+      g.appendChild(halo);
+    }
+    if (isHL) {
+      g.appendChild(mksvg('circle',{cx:pos.x,cy:pos.y,r:22,fill:'none',stroke:'#f5a623','stroke-width':'2',opacity:'0.7'}));
+    }
+
+    const circ = mksvg('circle',{
+      cx:pos.x, cy:pos.y, r: state.honeypot ? 17 : 14,
+      fill: state.isolated ? '#1a2a3a' : state.compromised ? '#1a0008' : '#0a1820',
+      stroke: state.compromised ? '#ff2d55' : state.isolated ? '#4a7090' : state.honeypot ? '#f5a623' : color,
+      'stroke-width': state.compromised ? '2' : '1.5',
+      filter: state.compromised ? 'url(#lvglow-red)' : '',
+    });
+    g.appendChild(circ);
+
+    const icon = mksvg('text',{x:pos.x,y:pos.y+1,'text-anchor':'middle','dominant-baseline':'middle','font-size':'11',
+      fill:state.compromised?'#ff2d55':state.isolated?'#4a7090':color,'pointer-events':'none'});
+    icon.textContent = NODE_ICONS[node.type] || '◎';
+    g.appendChild(icon);
+
+    const lbl = mksvg('text',{x:pos.x,y:pos.y+22,'text-anchor':'middle','font-size':'9',fill:'#4a6a7a',
+      'font-family':"'Share Tech Mono',monospace",'pointer-events':'none'});
+    lbl.textContent = node.id;
+    g.appendChild(lbl);
+
+    if (visible) {
+      g.addEventListener('mouseenter', e => lvShowTooltip(e, node, state));
+      g.addEventListener('mouseleave', lvHideTooltip);
+    }
+    svg.appendChild(g);
+  });
+}
+
+// ══════════════════════════════════════════════════════
+//  LIVE TOOLTIP
+// ══════════════════════════════════════════════════════
+const lvSvgEl  = document.getElementById('lv-svg');
+const lvTipEl  = document.getElementById('lv-tooltip');
+
+function lvShowTooltip(e, node, state) {
+  document.getElementById('lv-tt-title').textContent = node.label || node.id;
+  const rows = [
+    ['Type',  node.type],
+    ['Value', node.value],
+    ['Owner', state.owner||'—', state.owner||''],
+    ['Comp',  state.compromised?'YES':'no', state.compromised?'red':'green'],
+    ['Exfil', ((state.data_exfil||0)*100).toFixed(0)+'%'],
+    ['Alert', state.alert_level||0],
+    ['Patch', state.patch_level||0],
+  ];
+  if (node.vulnerabilities && node.vulnerabilities.length) {
+    rows.push(['CVEs', node.vulnerabilities.map(v=>v.cve||v).join(', ')]);
+  }
+  document.getElementById('lv-tt-body').innerHTML = rows.map(([k,v,c=''])=>
+    `<div class="tt-row"><span class="tt-key">${k}</span><span class="tt-val ${c}">${v}</span></div>`).join('');
+  lvTipEl.classList.add('visible');
+  lvMoveTip(e);
+  lvSvgEl.addEventListener('mousemove', lvMoveTip);
+}
+function lvMoveTip(e) {
+  const area = document.getElementById('lv-canvas-area');
+  const rect = area.getBoundingClientRect();
+  let lx = e.clientX - rect.left + 14;
+  let ly = e.clientY - rect.top  - 10;
+  if (lx + 240 > rect.width) lx -= 260;
+  lvTipEl.style.left = lx + 'px';
+  lvTipEl.style.top  = ly + 'px';
+}
+function lvHideTooltip() {
+  lvTipEl.classList.remove('visible');
+  lvSvgEl.removeEventListener('mousemove', lvMoveTip);
+}
+</script>
+</body>
+</html>
