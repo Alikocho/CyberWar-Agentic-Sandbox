@@ -1,0 +1,1647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CYBERWAR // BATTLE REPLAY</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Exo+2:wght@300;400;600;800&display=swap');
+
+  :root {
+    --bg:         #050a0e;
+    --bg2:        #081218;
+    --bg3:        #0a1820;
+    --panel:      #0d1f2d;
+    --border:     #1a3a50;
+    --amber:      #f5a623;
+    --amber-dim:  #7a5012;
+    --red:        #ff2d55;
+    --red-dim:    #5a0018;
+    --blue:       #00d4ff;
+    --blue-dim:   #004466;
+    --green:      #00ff88;
+    --green-dim:  #004422;
+    --gray:       #4a7090;
+    --text:       #c8dfe8;
+    --text-dim:   #4a6a7a;
+    --mono:       'Share Tech Mono', monospace;
+    --sans:       'Exo 2', sans-serif;
+    --glow-red:   0 0 12px #ff2d5566, 0 0 30px #ff2d5522;
+    --glow-blue:  0 0 12px #00d4ff66, 0 0 30px #00d4ff22;
+    --glow-amber: 0 0 8px #f5a62344;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    min-height: 100vh;
+    overflow: hidden;
+    position: relative;
+  }
+
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.15) 3px);
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 9998;
+    opacity: 0.6;
+  }
+
+  /* ─── Layout ─── */
+  .app {
+    display: grid;
+    grid-template-rows: 54px 1fr 88px;
+    grid-template-columns: 1fr 330px;
+    height: 100vh;
+  }
+
+  /* ─── Header ─── */
+  header {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    gap: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  header::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, rgba(255,45,85,0.07) 0%, transparent 35%, transparent 65%, rgba(0,212,255,0.07) 100%);
+  }
+
+  .logo {
+    font-family: var(--sans);
+    font-weight: 800;
+    font-size: 15px;
+    letter-spacing: 4px;
+    color: var(--amber);
+    text-shadow: var(--glow-amber);
+    text-transform: uppercase;
+    flex-shrink: 0;
+  }
+  .logo span { color: var(--text-dim); font-weight: 300; }
+
+  .header-divider { width: 1px; height: 24px; background: var(--border); flex-shrink: 0; }
+
+  .scenario-meta {
+    display: flex;
+    flex-direction: column;
+  }
+  .scenario-label {
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+  }
+  .scenario-name {
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  /* Threat level bar */
+  .threat-bar-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 120px;
+  }
+  .threat-label {
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    display: flex;
+    justify-content: space-between;
+  }
+  .threat-track {
+    height: 5px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 1px;
+    overflow: hidden;
+  }
+  .threat-fill {
+    height: 100%;
+    transition: width 0.4s ease, background 0.4s ease;
+    background: var(--green);
+  }
+
+  .header-spacer { flex: 1; }
+
+  .winner-badge {
+    font-family: var(--sans);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 3px;
+    padding: 4px 14px;
+    border-radius: 2px;
+    text-transform: uppercase;
+    flex-shrink: 0;
+  }
+  .winner-badge.red  { background: var(--red-dim); color: var(--red); border: 1px solid var(--red); box-shadow: var(--glow-red); }
+  .winner-badge.blue { background: var(--blue-dim); color: var(--blue); border: 1px solid var(--blue); box-shadow: var(--glow-blue); }
+
+  /* Key hints strip */
+  .key-hints {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+  .key-hint {
+    font-size: 9px;
+    color: var(--text-dim);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  kbd {
+    font-family: var(--mono);
+    font-size: 8px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    padding: 1px 4px;
+    color: var(--amber);
+  }
+
+  /* ─── Canvas ─── */
+  .canvas-area {
+    position: relative;
+    overflow: hidden;
+    background: var(--bg);
+  }
+  .corner { position: absolute; width: 20px; height: 20px; z-index: 10; }
+  .corner-tl { top: 10px; left: 10px; border-top: 1px solid var(--border); border-left: 1px solid var(--border); }
+  .corner-tr { top: 10px; right: 10px; border-top: 1px solid var(--border); border-right: 1px solid var(--border); }
+  .corner-bl { bottom: 10px; left: 10px; border-bottom: 1px solid var(--border); border-left: 1px solid var(--border); }
+  .corner-br { bottom: 10px; right: 10px; border-bottom: 1px solid var(--border); border-right: 1px solid var(--border); }
+
+  #network-canvas { width: 100%; height: 100%; display: block; }
+
+  /* Node tooltip */
+  .node-tooltip {
+    position: absolute;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    padding: 10px 14px;
+    font-size: 11px;
+    line-height: 1.8;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+    max-width: 230px;
+    z-index: 100;
+    box-shadow: 0 4px 24px #00000088;
+  }
+  .node-tooltip.visible { opacity: 1; }
+  .tooltip-title {
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 6px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+  .tooltip-row { display: flex; justify-content: space-between; gap: 12px; }
+  .tooltip-key { color: var(--text-dim); }
+  .tooltip-val { color: var(--amber); }
+  .tooltip-val.red { color: var(--red); }
+  .tooltip-val.blue { color: var(--blue); }
+  .tooltip-val.green { color: var(--green); }
+
+  /* ─── Right panel ─── */
+  .side-panel {
+    background: var(--bg2);
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* Tabs */
+  .tab-bar {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .tab-btn {
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--text-dim);
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 2px;
+    padding: 10px 4px;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.15s;
+  }
+  .tab-btn:hover { color: var(--text); }
+  .tab-btn.active { color: var(--amber); border-bottom-color: var(--amber); }
+
+  .tab-pane { display: none; flex-direction: column; flex: 1; overflow: hidden; }
+  .tab-pane.active { display: flex; }
+
+  /* Score section */
+  .panel-section {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .panel-section-title {
+    font-size: 9px;
+    letter-spacing: 3px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .panel-section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  .scores {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .score-card {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    padding: 8px;
+    text-align: center;
+  }
+  .score-team {
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 3px;
+  }
+  .score-team.red { color: var(--red); }
+  .score-team.blue { color: var(--blue); }
+  .score-val {
+    font-family: var(--sans);
+    font-size: 24px;
+    font-weight: 800;
+    line-height: 1;
+  }
+  .score-val.red { color: var(--red); text-shadow: var(--glow-red); }
+  .score-val.blue { color: var(--blue); text-shadow: var(--glow-blue); }
+
+  /* Score chart */
+  #score-chart { width: 100%; height: 110px; margin-top: 10px; }
+
+  /* Stat rows */
+  .stat-rows {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 6px;
+    margin-top: 8px;
+  }
+  .stat-cell {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    padding: 5px 6px;
+    text-align: center;
+  }
+  .stat-label { font-size: 7px; letter-spacing: 1px; color: var(--text-dim); text-transform: uppercase; }
+  .stat-value { font-size: 13px; font-weight: 600; color: var(--amber); margin-top: 2px; }
+
+  /* Action log */
+  .action-log {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 0;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+  .log-entry {
+    padding: 6px 14px;
+    font-size: 10px;
+    line-height: 1.5;
+    border-left: 2px solid transparent;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .log-entry:hover { background: var(--bg3); }
+  .log-entry.active { background: var(--bg3); border-left-color: var(--amber); }
+  .log-turn { font-size: 9px; color: var(--text-dim); letter-spacing: 1px; }
+  .log-red { color: var(--red); }
+  .log-blue { color: var(--blue); }
+  .log-msg { color: var(--text-dim); font-size: 9px; margin-top: 1px; }
+  .log-delta { font-size: 9px; margin-top: 1px; }
+  .log-delta.pos { color: var(--green); }
+  .log-delta.neg { color: var(--red); }
+  .log-alert { color: var(--amber); font-size: 9px; margin-top: 2px; }
+  .log-status-success { color: var(--green); font-size: 9px; }
+  .log-status-failure { color: #aa3344; font-size: 9px; }
+  .log-status-detected { color: var(--amber); font-size: 9px; }
+
+  /* Node grid */
+  .node-grid {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px 12px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 5px;
+    align-content: start;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+  .node-chip {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    padding: 5px 6px;
+    font-size: 9px;
+    cursor: pointer;
+    transition: all 0.15s;
+    position: relative;
+    overflow: hidden;
+  }
+  .node-chip:hover { border-color: var(--amber); }
+  .node-chip.compromised { border-color: var(--red); }
+  .node-chip.isolated { border-color: var(--gray); opacity: 0.6; }
+  .node-chip.honeypot { border-color: var(--amber); }
+  /* Alert bar on chip */
+  .node-chip-alert {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--amber);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.3s;
+  }
+  .node-chip.alert-active .node-chip-alert { transform: scaleX(1); }
+  .node-chip-name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--text-dim);
+    font-size: 8px;
+  }
+  .node-chip-owner {
+    font-family: var(--sans);
+    font-size: 10px;
+    font-weight: 600;
+    margin-top: 1px;
+  }
+  .node-chip-owner.red { color: var(--red); }
+  .node-chip-owner.blue { color: var(--blue); }
+  .node-chip-owner.neutral { color: var(--text-dim); }
+  .exfil-bar {
+    position: absolute;
+    bottom: 0; left: 0;
+    height: 2px;
+    background: var(--red);
+    transition: width 0.3s;
+    box-shadow: 0 0 4px var(--red);
+  }
+
+  /* Intel pane */
+  .intel-pane {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px 14px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+  .intel-group { margin-bottom: 16px; }
+  .intel-group-title {
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 4px;
+  }
+  .intel-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    padding: 3px 0;
+    border-bottom: 1px solid rgba(26,58,80,0.4);
+    gap: 8px;
+  }
+  .intel-key { color: var(--text-dim); }
+  .intel-val { color: var(--text); text-align: right; }
+  .intel-val.red { color: var(--red); }
+  .intel-val.blue { color: var(--blue); }
+  .intel-val.amber { color: var(--amber); }
+  .intel-val.green { color: var(--green); }
+  .vuln-chip {
+    display: inline-block;
+    font-size: 8px;
+    background: var(--red-dim);
+    border: 1px solid var(--red);
+    color: var(--red);
+    padding: 1px 5px;
+    margin: 2px 2px 0 0;
+  }
+
+  /* ─── Timeline ─── */
+  .timeline {
+    grid-column: 1 / -1;
+    background: var(--bg2);
+    border-top: 1px solid var(--border);
+    padding: 0 20px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .playback-controls { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+
+  .ctrl-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text);
+    width: 30px;
+    height: 30px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    transition: all 0.15s;
+    font-family: var(--mono);
+  }
+  .ctrl-btn:hover { border-color: var(--amber); color: var(--amber); }
+  .ctrl-btn.active { background: var(--amber-dim); border-color: var(--amber); color: var(--amber); }
+
+  .turn-counter {
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--amber);
+    min-width: 80px;
+    flex-shrink: 0;
+  }
+
+  .scrubber-wrap { flex: 1; position: relative; }
+
+  .scrubber-track {
+    height: 6px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    position: relative;
+    cursor: pointer;
+  }
+  .scrubber-fill {
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    background: var(--amber-dim);
+    transition: width 0.1s;
+  }
+  .scrubber-handle {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 12px;
+    height: 12px;
+    background: var(--amber);
+    border-radius: 50%;
+    box-shadow: var(--glow-amber);
+    transition: left 0.1s;
+  }
+
+  /* Turn markers */
+  .turn-markers {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+  .turn-marker {
+    position: absolute;
+    top: -3px;
+    width: 2px;
+    height: 12px;
+    background: var(--border);
+    transform: translateX(-50%);
+  }
+  .turn-marker.red-win  { background: var(--red); height: 16px; top: -5px; }
+  .turn-marker.blue-win { background: var(--blue); height: 16px; top: -5px; }
+
+  .speed-wrap { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+  .speed-label { font-size: 9px; letter-spacing: 1px; color: var(--text-dim); }
+  .speed-select {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 3px 6px;
+    cursor: pointer;
+  }
+  .speed-select:focus { outline: none; border-color: var(--amber); }
+
+  /* ─── Battle Summary Overlay ─── */
+  .summary-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(5,10,14,0.92);
+    z-index: 200;
+    display: none;
+    align-items: center;
+    justify-content: center;
+  }
+  .summary-overlay.visible { display: flex; }
+  .summary-box {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    padding: 32px 40px;
+    min-width: 520px;
+    max-width: 640px;
+    position: relative;
+  }
+  .summary-title {
+    font-family: var(--sans);
+    font-size: 24px;
+    font-weight: 800;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .summary-title.red { color: var(--red); text-shadow: var(--glow-red); }
+  .summary-title.blue { color: var(--blue); text-shadow: var(--glow-blue); }
+  .summary-subtitle {
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+    margin-bottom: 24px;
+  }
+  .summary-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .summary-stat {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    padding: 12px 16px;
+  }
+  .summary-stat-label { font-size: 9px; letter-spacing: 2px; color: var(--text-dim); text-transform: uppercase; }
+  .summary-stat-value { font-family: var(--sans); font-size: 22px; font-weight: 800; color: var(--text); margin-top: 4px; }
+  .summary-events {
+    border-top: 1px solid var(--border);
+    padding-top: 16px;
+    margin-bottom: 20px;
+  }
+  .summary-events-title { font-size: 9px; letter-spacing: 2px; color: var(--text-dim); text-transform: uppercase; margin-bottom: 8px; }
+  .summary-event { font-size: 10px; color: var(--text-dim); padding: 3px 0; }
+  .summary-event .event-turn { color: var(--amber); }
+  .summary-close {
+    position: absolute;
+    top: 16px; right: 20px;
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 4px 10px;
+    cursor: pointer;
+  }
+  .summary-close:hover { border-color: var(--amber); color: var(--amber); }
+  .summary-hint { font-size: 10px; color: var(--text-dim); text-align: center; }
+
+  /* Flash animation for node state changes */
+  @keyframes node-flash-red   { 0%,100%{opacity:0} 30%,60%{opacity:1} }
+  @keyframes node-flash-blue  { 0%,100%{opacity:0} 30%,60%{opacity:1} }
+  @keyframes node-flash-green { 0%,100%{opacity:0} 30%,60%{opacity:1} }
+  @keyframes packet-travel { 0%{opacity:0.9;offset-distance:0%} 100%{opacity:0;offset-distance:100%} }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Header -->
+  <header>
+    <div class="logo">CYBER<span>WAR</span></div>
+    <div class="header-divider"></div>
+    <div class="scenario-meta">
+      <span class="scenario-label">Scenario</span>
+      <span class="scenario-name" id="scenario-name">—</span>
+    </div>
+    <div class="header-divider"></div>
+    <div class="threat-bar-wrap">
+      <div class="threat-label">
+        <span>THREAT LEVEL</span>
+        <span id="threat-pct">0%</span>
+      </div>
+      <div class="threat-track">
+        <div class="threat-fill" id="threat-fill" style="width:0%"></div>
+      </div>
+    </div>
+    <div class="header-spacer"></div>
+    <div class="key-hints">
+      <div class="key-hint"><kbd>←</kbd><kbd>→</kbd> step</div>
+      <div class="key-hint"><kbd>SPC</kbd> play</div>
+      <div class="key-hint"><kbd>S</kbd> summary</div>
+      <div class="key-hint"><kbd>R</kbd> reset</div>
+    </div>
+    <div class="header-divider"></div>
+    <div class="winner-badge blue" id="winner-badge">—</div>
+  </header>
+
+  <!-- Main canvas -->
+  <div class="canvas-area" id="canvas-area">
+    <div class="corner corner-tl"></div>
+    <div class="corner corner-tr"></div>
+    <div class="corner corner-bl"></div>
+    <div class="corner corner-br"></div>
+    <svg id="network-canvas"></svg>
+    <div class="node-tooltip" id="tooltip">
+      <div class="tooltip-title" id="tt-title">Node</div>
+      <div id="tt-body"></div>
+    </div>
+  </div>
+
+  <!-- Right panel -->
+  <div class="side-panel">
+    <div class="tab-bar">
+      <button class="tab-btn active" data-tab="intel">① INTEL</button>
+      <button class="tab-btn" data-tab="log">② LOG</button>
+      <button class="tab-btn" data-tab="nodes">③ NODES</button>
+    </div>
+
+    <!-- INTEL tab -->
+    <div class="tab-pane active" id="tab-intel">
+      <div class="panel-section">
+        <div class="panel-section-title">Score</div>
+        <div class="scores">
+          <div class="score-card">
+            <div class="score-team red">⚔ Red</div>
+            <div class="score-val red" id="score-red">0</div>
+          </div>
+          <div class="score-card">
+            <div class="score-team blue">🛡 Blue</div>
+            <div class="score-val blue" id="score-blue">0</div>
+          </div>
+        </div>
+        <svg id="score-chart"></svg>
+        <div class="stat-rows">
+          <div class="stat-cell">
+            <div class="stat-label">Compromised</div>
+            <div class="stat-value" id="stat-compromised">0</div>
+          </div>
+          <div class="stat-cell">
+            <div class="stat-label">Exfil %</div>
+            <div class="stat-value" id="stat-exfil">0%</div>
+          </div>
+          <div class="stat-cell">
+            <div class="stat-label">Alerts</div>
+            <div class="stat-value" id="stat-alerts">0</div>
+          </div>
+        </div>
+      </div>
+      <div class="intel-pane" id="intel-pane">
+        <!-- populated dynamically -->
+      </div>
+    </div>
+
+    <!-- LOG tab -->
+    <div class="tab-pane" id="tab-log">
+      <div class="action-log" id="action-log"></div>
+    </div>
+
+    <!-- NODES tab -->
+    <div class="tab-pane" id="tab-nodes">
+      <div class="node-grid" id="node-grid"></div>
+    </div>
+  </div>
+
+  <!-- Timeline -->
+  <div class="timeline">
+    <div class="playback-controls">
+      <button class="ctrl-btn" id="btn-reset" title="Reset (R)">⏮</button>
+      <button class="ctrl-btn" id="btn-prev"  title="Prev (←)">◀</button>
+      <button class="ctrl-btn" id="btn-play"  title="Play/Pause (Space)">▶</button>
+      <button class="ctrl-btn" id="btn-next"  title="Next (→)">▶</button>
+      <button class="ctrl-btn" id="btn-summary" title="Summary (S)">≡</button>
+    </div>
+    <div class="turn-counter" id="turn-counter">T 00 / 00</div>
+    <div class="scrubber-wrap">
+      <div class="scrubber-track" id="scrubber-track">
+        <div class="scrubber-fill" id="scrubber-fill"></div>
+        <div class="turn-markers" id="turn-markers"></div>
+        <div class="scrubber-handle" id="scrubber-handle"></div>
+      </div>
+    </div>
+    <div class="speed-wrap">
+      <span class="speed-label">SPD</span>
+      <select class="speed-select" id="speed-select">
+        <option value="1200">0.5×</option>
+        <option value="800" selected>1×</option>
+        <option value="400">2×</option>
+        <option value="150">4×</option>
+        <option value="50">8×</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<!-- Battle Summary Overlay -->
+<div class="summary-overlay" id="summary-overlay">
+  <div class="summary-box">
+    <button class="summary-close" id="summary-close">✕ CLOSE</button>
+    <div class="summary-title" id="sum-winner-title">—</div>
+    <div class="summary-subtitle" id="sum-subtitle">—</div>
+    <div class="summary-grid">
+      <div class="summary-stat">
+        <div class="summary-stat-label">Total Turns</div>
+        <div class="summary-stat-value" id="sum-turns">—</div>
+      </div>
+      <div class="summary-stat">
+        <div class="summary-stat-label">Winner</div>
+        <div class="summary-stat-value" id="sum-winner">—</div>
+      </div>
+      <div class="summary-stat">
+        <div class="summary-stat-label">Red Final Score</div>
+        <div class="summary-stat-value" id="sum-red-score" style="color:var(--red)">—</div>
+      </div>
+      <div class="summary-stat">
+        <div class="summary-stat-label">Blue Final Score</div>
+        <div class="summary-stat-value" id="sum-blue-score" style="color:var(--blue)">—</div>
+      </div>
+      <div class="summary-stat">
+        <div class="summary-stat-label">Nodes Compromised</div>
+        <div class="summary-stat-value" id="sum-compromised">—</div>
+      </div>
+      <div class="summary-stat">
+        <div class="summary-stat-label">Total Exfil</div>
+        <div class="summary-stat-value" id="sum-exfil">—</div>
+      </div>
+    </div>
+    <div class="summary-events">
+      <div class="summary-events-title">Key Events</div>
+      <div id="sum-events"></div>
+    </div>
+    <div class="summary-hint">Press <kbd>S</kbd> or <kbd>Esc</kbd> to close</div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════
+//  GAME DATA  (injected at build time)
+// ══════════════════════════════════════════════════════
+const GAME_DATA = GAME_DATA_PLACEHOLDER;
+
+// ══════════════════════════════════════════════════════
+//  NODE POSITIONS  (fractional x,y 0..1)
+// ══════════════════════════════════════════════════════
+const NODE_POSITIONS = {
+  // Corporate
+  internet:     { x: 0.50, y: 0.06 },
+  dmz_web:      { x: 0.35, y: 0.22 },
+  dmz_mail:     { x: 0.65, y: 0.22 },
+  fw_internal:  { x: 0.50, y: 0.40 },
+  workstation1: { x: 0.20, y: 0.60 },
+  workstation2: { x: 0.42, y: 0.60 },
+  db_server:    { x: 0.63, y: 0.60 },
+  file_server:  { x: 0.30, y: 0.80 },
+  ad_server:    { x: 0.70, y: 0.80 },
+  // ICS
+  corp_laptop:  { x: 0.50, y: 0.08 },
+  it_server:    { x: 0.50, y: 0.28 },
+  historian:    { x: 0.25, y: 0.46 },
+  hmi:          { x: 0.75, y: 0.46 },
+  dmz_firewall: { x: 0.50, y: 0.46 },
+  plc_pump:     { x: 0.30, y: 0.72 },
+  plc_valve:    { x: 0.70, y: 0.72 },
+  // Cloud
+  public_api:   { x: 0.50, y: 0.10 },
+  lambda_fn:    { x: 0.25, y: 0.32 },
+  ec2_app:      { x: 0.75, y: 0.32 },
+  rds_db:       { x: 0.50, y: 0.55 },
+  s3_bucket:    { x: 0.20, y: 0.75 },
+  iam_role:     { x: 0.80, y: 0.55 },
+  vpc_endpoint: { x: 0.50, y: 0.75 },
+  // Government / Defense SCIF
+  unclass_ws:   { x: 0.50, y: 0.08 },
+  nipr_server:  { x: 0.50, y: 0.28 },
+  cross_domain: { x: 0.50, y: 0.46 },
+  sipr_gateway: { x: 0.50, y: 0.62 },
+  intel_db:     { x: 0.20, y: 0.78 },
+  mission_sys:  { x: 0.50, y: 0.80 },
+  scif_terminal:{ x: 0.80, y: 0.92 },
+  comms_node:   { x: 0.80, y: 0.68 },
+};
+
+const NODE_ICONS = {
+  router: '⬡', server: '▣', workstation: '◻', firewall: '◈',
+  database: '◆', dmz: '◉'
+};
+const TYPE_COLORS = {
+  router: '#f5a623', server: '#00d4ff', workstation: '#00ff88',
+  firewall: '#ff9f43', database: '#ff2d55', dmz: '#a55eea'
+};
+
+// ══════════════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════════════
+let currentTurn = 0;
+let isPlaying   = false;
+let playTimer   = null;
+let svgW = 0, svgH = 0;
+let activeTab   = 'intel';
+let selectedNode = null;
+
+const svg       = document.getElementById('network-canvas');
+const tooltip   = document.getElementById('tooltip');
+const logEl     = document.getElementById('action-log');
+const nodeGrid  = document.getElementById('node-grid');
+const intelPane = document.getElementById('intel-pane');
+
+// ══════════════════════════════════════════════════════
+//  TABS
+// ══════════════════════════════════════════════════════
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const tab = btn.dataset.tab;
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + tab).classList.add('active');
+    activeTab = tab;
+  });
+});
+
+// ══════════════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════════════
+function init() {
+  document.getElementById('scenario-name').textContent = GAME_DATA.scenario;
+
+  const wb = document.getElementById('winner-badge');
+  wb.textContent = (GAME_DATA.winner || 'blue').toUpperCase() + ' WINS';
+  wb.className = 'winner-badge ' + GAME_DATA.winner;
+
+  buildScoreChart();
+  buildTurnMarkers();
+  buildActionLog();
+  buildNodeGrid();
+  buildIntel(0);
+  buildSummary();
+  resizeAndDraw();
+
+  window.addEventListener('resize', resizeAndDraw);
+
+  // Scrubber
+  const track = document.getElementById('scrubber-track');
+  let dragging = false;
+  track.addEventListener('mousedown', e => { dragging = true; handleScrub(e); });
+  window.addEventListener('mousemove', e => { if (dragging) handleScrub(e); });
+  window.addEventListener('mouseup', () => { dragging = false; });
+
+  // Buttons
+  document.getElementById('btn-prev').onclick    = () => { stopPlay(); setTurn(currentTurn - 1); };
+  document.getElementById('btn-next').onclick    = () => { stopPlay(); setTurn(currentTurn + 1); };
+  document.getElementById('btn-reset').onclick   = () => { stopPlay(); setTurn(0); };
+  document.getElementById('btn-play').onclick    = togglePlay;
+  document.getElementById('btn-summary').onclick = showSummary;
+  document.getElementById('summary-close').onclick  = hideSummary;
+
+  // Keyboard
+  window.addEventListener('keydown', e => {
+    if (e.target.tagName === 'SELECT') return;
+    switch (e.key) {
+      case 'ArrowLeft':  e.preventDefault(); stopPlay(); setTurn(currentTurn - 1); break;
+      case 'ArrowRight': e.preventDefault(); stopPlay(); setTurn(currentTurn + 1); break;
+      case ' ':          e.preventDefault(); togglePlay(); break;
+      case 'r': case 'R': stopPlay(); setTurn(0); break;
+      case 's': case 'S':
+        document.getElementById('summary-overlay').classList.contains('visible')
+          ? hideSummary() : showSummary(); break;
+      case 'Escape': hideSummary(); break;
+      case '1': switchTab('intel');  break;
+      case '2': switchTab('log');    break;
+      case '3': switchTab('nodes');  break;
+    }
+  });
+}
+
+function switchTab(name) {
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.tab === name);
+  });
+  document.querySelectorAll('.tab-pane').forEach(p => {
+    p.classList.toggle('active', p.id === 'tab-' + name);
+  });
+  activeTab = name;
+}
+
+function resizeAndDraw() {
+  const area = document.getElementById('canvas-area');
+  svgW = area.clientWidth;
+  svgH = area.clientHeight;
+  svg.setAttribute('width', svgW);
+  svg.setAttribute('height', svgH);
+  drawNetwork(currentTurn);
+}
+
+// ══════════════════════════════════════════════════════
+//  TURN MANAGEMENT
+// ══════════════════════════════════════════════════════
+function setTurn(t) {
+  currentTurn = Math.max(0, Math.min(GAME_DATA.total_turns, t));
+  updateScrubber();
+  drawNetwork(currentTurn);
+  updateScores(currentTurn);
+  updateNodeGrid(currentTurn);
+  highlightLogEntry(currentTurn);
+  updateThreatBar(currentTurn);
+  updateStats(currentTurn);
+  buildIntel(currentTurn);
+  document.getElementById('turn-counter').textContent =
+    `T ${String(currentTurn).padStart(2,'0')} / ${String(GAME_DATA.total_turns).padStart(2,'0')}`;
+}
+
+function togglePlay() { isPlaying ? stopPlay() : startPlay(); }
+
+function startPlay() {
+  isPlaying = true;
+  document.getElementById('btn-play').classList.add('active');
+  document.getElementById('btn-play').textContent = '⏸';
+  tick();
+}
+
+function stopPlay() {
+  isPlaying = false;
+  clearTimeout(playTimer);
+  document.getElementById('btn-play').classList.remove('active');
+  document.getElementById('btn-play').textContent = '▶';
+}
+
+function tick() {
+  if (!isPlaying) return;
+  if (currentTurn >= GAME_DATA.total_turns) { stopPlay(); return; }
+  setTurn(currentTurn + 1);
+  const speed = parseInt(document.getElementById('speed-select').value);
+  playTimer = setTimeout(tick, speed);
+}
+
+function updateScrubber() {
+  const pct = GAME_DATA.total_turns > 0 ? (currentTurn / GAME_DATA.total_turns) * 100 : 0;
+  document.getElementById('scrubber-fill').style.width = pct + '%';
+  document.getElementById('scrubber-handle').style.left = pct + '%';
+}
+
+function handleScrub(e) {
+  const track = document.getElementById('scrubber-track');
+  const rect  = track.getBoundingClientRect();
+  const pct   = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+  setTurn(Math.round(pct * GAME_DATA.total_turns));
+}
+
+// ══════════════════════════════════════════════════════
+//  THREAT BAR
+// ══════════════════════════════════════════════════════
+function updateThreatBar(turn) {
+  const snap = getSnapshot(turn);
+  const total = GAME_DATA.nodes.length;
+  const compromised = Object.values(snap).filter(n => n.compromised).length;
+  const pct = total ? Math.round((compromised / total) * 100) : 0;
+  const fill = document.getElementById('threat-fill');
+  const label = document.getElementById('threat-pct');
+  fill.style.width = pct + '%';
+  fill.style.background = pct < 25 ? 'var(--green)' : pct < 60 ? 'var(--amber)' : 'var(--red)';
+  label.textContent = pct + '%';
+}
+
+// ══════════════════════════════════════════════════════
+//  STATS ROW
+// ══════════════════════════════════════════════════════
+function updateStats(turn) {
+  const snap = getSnapshot(turn);
+  const nodes = Object.values(snap);
+  const compromised = nodes.filter(n => n.compromised).length;
+  const totalExfil = nodes.reduce((s, n) => s + n.data_exfil, 0);
+  const maxExfil = nodes.length;
+  const exfilPct = maxExfil ? Math.round((totalExfil / maxExfil) * 100) : 0;
+
+  // Count alerts across history up to turn
+  let alerts = 0;
+  for (let i = 0; i < Math.min(turn, GAME_DATA.history.length); i++) {
+    alerts += (GAME_DATA.history[i].alerts || []).length;
+  }
+
+  document.getElementById('stat-compromised').textContent = compromised;
+  document.getElementById('stat-exfil').textContent = exfilPct + '%';
+  document.getElementById('stat-alerts').textContent = alerts;
+}
+
+// ══════════════════════════════════════════════════════
+//  NETWORK DRAWING
+// ══════════════════════════════════════════════════════
+function makeSVG(tag, attrs = {}) {
+  const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  Object.entries(attrs).forEach(([k, v]) => el.setAttribute(k, v));
+  return el;
+}
+
+function getNodePos(nodeId) {
+  const pos = NODE_POSITIONS[nodeId];
+  if (!pos) return { x: svgW / 2, y: svgH / 2 };
+  return { x: pos.x * svgW, y: pos.y * svgH };
+}
+
+function getSnapshot(turn) {
+  return GAME_DATA.snapshots[Math.min(turn, GAME_DATA.snapshots.length - 1)];
+}
+
+function drawNetwork(turn) {
+  if (!svgW || !svgH) return;
+  const snap     = getSnapshot(turn);
+  const turnData = turn > 0 ? GAME_DATA.history[turn - 1] : null;
+
+  while (svg.firstChild) svg.removeChild(svg.firstChild);
+
+  // Defs
+  const defs = makeSVG('defs');
+  ['red','blue','amber','green'].forEach(c => {
+    const colors = { red:'#ff2d55', blue:'#00d4ff', amber:'#f5a623', green:'#00ff88' };
+    const f = makeSVG('filter', { id:`glow-${c}`, x:'-50%', y:'-50%', width:'200%', height:'200%' });
+    const fe = makeSVG('feGaussianBlur', { in:'SourceGraphic', stdDeviation:'4', result:'blur' });
+    const cm = makeSVG('feColorMatrix', { in:'blur', type:'matrix',
+      values:'0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 3 -1' });
+    f.appendChild(fe); f.appendChild(cm);
+    defs.appendChild(f);
+  });
+  svg.appendChild(defs);
+
+  // Grid
+  const gridG = makeSVG('g', { opacity: '0.05' });
+  const step = 40;
+  for (let x = 0; x < svgW; x += step)
+    gridG.appendChild(makeSVG('line', { x1:x, y1:0, x2:x, y2:svgH, stroke:'#4a7090','stroke-width':'0.5' }));
+  for (let y = 0; y < svgH; y += step)
+    gridG.appendChild(makeSVG('line', { x1:0, y1:y, x2:svgW, y2:y, stroke:'#4a7090','stroke-width':'0.5' }));
+  svg.appendChild(gridG);
+
+  // Edges
+  GAME_DATA.edges.forEach(edge => {
+    const src = getNodePos(edge.source);
+    const dst = getNodePos(edge.target);
+
+    const isRedEdge = turnData &&
+      (turnData.red_target === edge.target || turnData.red_target === edge.source) &&
+      turnData.red_status === 'success';
+    const isBlueEdge = turnData &&
+      (turnData.blue_target === edge.target || turnData.blue_target === edge.source) &&
+      turnData.blue_status === 'success';
+
+    // Base edge
+    const line = makeSVG('line', {
+      x1: src.x, y1: src.y, x2: dst.x, y2: dst.y,
+      stroke: isRedEdge ? '#ff2d55' : isBlueEdge ? '#00d4ff' : edge.monitored ? '#2a5a70' : '#1a3a50',
+      'stroke-width': isRedEdge || isBlueEdge ? '2' : '1',
+      opacity: '0.8'
+    });
+    if (isRedEdge || isBlueEdge)
+      line.setAttribute('filter', isRedEdge ? 'url(#glow-red)' : 'url(#glow-blue)');
+    svg.appendChild(line);
+
+    // Monitor indicator
+    if (edge.monitored) {
+      const midX = (src.x + dst.x) / 2;
+      const midY = (src.y + dst.y) / 2;
+      const dot = makeSVG('circle', { cx: midX, cy: midY, r: '3', fill: '#2a6a88', opacity: '0.7' });
+      svg.appendChild(dot);
+    }
+
+    // Multi-packet animation on active red edges
+    if (isRedEdge) {
+      for (let pi = 0; pi < 3; pi++) {
+        const pkt = makeSVG('circle', { r: '3', fill: '#ff2d55', opacity: '0' });
+        const anim = document.createElementNS('http://www.w3.org/2000/svg', 'animateMotion');
+        anim.setAttribute('dur', (0.8 + pi * 0.25) + 's');
+        anim.setAttribute('begin', (pi * 0.2) + 's');
+        anim.setAttribute('repeatCount', '3');
+        anim.setAttribute('fill', 'freeze');
+        const mp = document.createElementNS('http://www.w3.org/2000/svg', 'mpath');
+        const pathEl = makeSVG('path', { d: `M${src.x},${src.y} L${dst.x},${dst.y}` });
+        pathEl.id = `pkt-path-${edge.source}-${edge.target}-${pi}`;
+        defs.appendChild(pathEl);
+        mp.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', '#' + pathEl.id);
+        anim.appendChild(mp);
+        const opAnim = makeSVG('animate', { attributeName:'opacity', values:'0;0.9;0', dur:(0.8+pi*0.25)+'s', begin:(pi*0.2)+'s', repeatCount:'3' });
+        pkt.appendChild(anim);
+        pkt.appendChild(opAnim);
+        svg.appendChild(pkt);
+      }
+    }
+
+    // Exfil arc on compromised nodes
+    const srcState = snap[edge.source];
+    if (srcState && srcState.data_exfil > 0.1 && srcState.compromised) {
+      const arcG = makeSVG('g', { opacity: '0.5' });
+      const arc = makeSVG('line', {
+        x1: src.x, y1: src.y, x2: dst.x, y2: dst.y,
+        stroke: '#ff2d55', 'stroke-width': (srcState.data_exfil * 3).toFixed(1),
+        'stroke-dasharray': '4 8', opacity: '0.4'
+      });
+      arcG.appendChild(arc);
+      svg.appendChild(arcG);
+    }
+  });
+
+  // Nodes
+  GAME_DATA.nodes.forEach(node => {
+    const pos   = getNodePos(node.id);
+    const state = snap[node.id] || {};
+    const color = TYPE_COLORS[node.type] || '#4a7090';
+
+    const isCompromised = state.compromised;
+    const isIsolated    = state.isolated;
+    const isHoneypot    = state.honeypot;
+    const alertLevel    = state.alert_level || 0;
+
+    const owner = state.owner || 'neutral';
+    const glowFilter = isCompromised ? 'url(#glow-red)' :
+                       owner === 'blue' ? 'url(#glow-blue)' : '';
+
+    const g = makeSVG('g', { style:'cursor:pointer' });
+
+    // Pulse ring for alert
+    if (alertLevel > 0) {
+      const ring = makeSVG('circle', {
+        cx: pos.x, cy: pos.y,
+        r: 22 + alertLevel * 4,
+        fill: 'none',
+        stroke: '#f5a623',
+        'stroke-width': '1',
+        opacity: '0.3'
+      });
+      const animR = makeSVG('animate', { attributeName:'r', values:`${22+alertLevel*4};${30+alertLevel*4};${22+alertLevel*4}`, dur:'1.5s', repeatCount:'indefinite' });
+      const animO = makeSVG('animate', { attributeName:'opacity', values:'0.3;0;0.3', dur:'1.5s', repeatCount:'indefinite' });
+      ring.appendChild(animR);
+      ring.appendChild(animO);
+      g.appendChild(ring);
+    }
+
+    // Alert halo for compromised
+    if (isCompromised) {
+      const halo = makeSVG('circle', {
+        cx: pos.x, cy: pos.y, r: 20,
+        fill: '#ff2d5511', stroke: '#ff2d55', 'stroke-width': '1',
+        opacity: '0.6', filter: 'url(#glow-red)'
+      });
+      const animO = makeSVG('animate', { attributeName:'opacity', values:'0.6;0.2;0.6', dur:'1.2s', repeatCount:'indefinite' });
+      halo.appendChild(animO);
+      g.appendChild(halo);
+    }
+
+    // Node body
+    const r = isHoneypot ? 17 : 14;
+    const circle = makeSVG('circle', {
+      cx: pos.x, cy: pos.y, r,
+      fill: isIsolated ? '#1a2a3a' : isCompromised ? '#1a0008' : '#0a1820',
+      stroke: isCompromised ? '#ff2d55' : owner === 'blue' ? '#00d4ff' : isIsolated ? '#4a7090' : isHoneypot ? '#f5a623' : color,
+      'stroke-width': isCompromised || owner === 'blue' ? '2' : '1.5',
+      filter: glowFilter
+    });
+    g.appendChild(circle);
+
+    // Icon
+    const icon = makeSVG('text', {
+      x: pos.x, y: pos.y + 1,
+      'text-anchor': 'middle',
+      'dominant-baseline': 'middle',
+      'font-size': '11',
+      fill: isCompromised ? '#ff2d55' : isIsolated ? '#4a7090' : color,
+      'pointer-events': 'none'
+    });
+    icon.textContent = NODE_ICONS[node.type] || '◎';
+    g.appendChild(icon);
+
+    // Label
+    const label = makeSVG('text', {
+      x: pos.x, y: pos.y + 22,
+      'text-anchor': 'middle',
+      'font-size': '9',
+      fill: '#4a6a7a',
+      'font-family': "'Share Tech Mono', monospace",
+      'pointer-events': 'none'
+    });
+    label.textContent = node.id;
+    g.appendChild(label);
+
+    // Tooltip events
+    g.addEventListener('mouseenter', (e) => showTooltip(e, node, state));
+    g.addEventListener('mouseleave', () => hideTooltip());
+    g.addEventListener('click', () => { selectedNode = node.id; buildIntel(currentTurn); switchTab('intel'); });
+
+    svg.appendChild(g);
+  });
+
+  // Red / Blue action target flash
+  if (turnData) {
+    ['red', 'blue'].forEach(team => {
+      const target = team === 'red' ? turnData.red_target : turnData.blue_target;
+      const status = team === 'red' ? turnData.red_status : turnData.blue_status;
+      if (!target || !NODE_POSITIONS[target]) return;
+      const pos = getNodePos(target);
+      const flashColor = team === 'red' ? '#ff2d55' : '#00d4ff';
+      const flash = makeSVG('circle', {
+        cx: pos.x, cy: pos.y, r: 26, fill: 'none',
+        stroke: flashColor, 'stroke-width': '2', opacity: '0'
+      });
+      const anim = makeSVG('animate', { attributeName:'opacity', values:'0;0.8;0', dur:'0.6s', fill:'freeze' });
+      const animR = makeSVG('animate', { attributeName:'r', values:'14;30;40', dur:'0.6s', fill:'freeze' });
+      flash.appendChild(anim);
+      flash.appendChild(animR);
+      svg.appendChild(flash);
+    });
+  }
+}
+
+// ══════════════════════════════════════════════════════
+//  TOOLTIP
+// ══════════════════════════════════════════════════════
+function showTooltip(e, node, state) {
+  document.getElementById('tt-title').textContent = node.label;
+  const rows = [
+    ['Type',       node.type],
+    ['Value',      node.value],
+    ['Owner',      state.owner || '—', state.owner === 'red' ? 'red' : state.owner === 'blue' ? 'blue' : ''],
+    ['Compromised',state.compromised ? 'YES' : 'no', state.compromised ? 'red' : 'green'],
+    ['Isolated',   state.isolated ? 'YES' : 'no'],
+    ['Alert',      state.alert_level || 0],
+    ['Exfil',      ((state.data_exfil || 0) * 100).toFixed(0) + '%'],
+    ['Patch',      state.patch_level || 0],
+  ];
+  if (node.vulnerabilities && node.vulnerabilities.length) {
+    rows.push(['CVEs', node.vulnerabilities.map(v => v.cve).join(', ')]);
+  }
+  document.getElementById('tt-body').innerHTML = rows.map(([k, v, cls]) =>
+    `<div class="tooltip-row"><span class="tooltip-key">${k}</span><span class="tooltip-val ${cls||''}">${v}</span></div>`
+  ).join('');
+  tooltip.classList.add('visible');
+  moveTip(e);
+  svg.addEventListener('mousemove', moveTip);
+}
+function moveTip(e) {
+  const area = document.getElementById('canvas-area');
+  const rect = area.getBoundingClientRect();
+  let lx = e.clientX - rect.left + 14;
+  let ly = e.clientY - rect.top - 10;
+  if (lx + 240 > rect.width) lx -= 260;
+  tooltip.style.left = lx + 'px';
+  tooltip.style.top  = ly + 'px';
+}
+function hideTooltip() {
+  tooltip.classList.remove('visible');
+  svg.removeEventListener('mousemove', moveTip);
+}
+
+// ══════════════════════════════════════════════════════
+//  SCORE CHART  (enhanced, 110px, axis, dots)
+// ══════════════════════════════════════════════════════
+function buildScoreChart() {
+  const chartEl = document.getElementById('score-chart');
+  const W = 302, H = 110, PAD = { t: 8, r: 10, b: 22, l: 28 };
+  chartEl.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  chartEl.setAttribute('preserveAspectRatio', 'none');
+
+  const history = GAME_DATA.history;
+  if (!history.length) return;
+
+  const maxScore = Math.max(
+    ...history.map(h => Math.max(h.red_score || 0, h.blue_score || 0)),
+    1
+  );
+
+  const iW = W - PAD.l - PAD.r;
+  const iH = H - PAD.t - PAD.b;
+
+  // Background
+  chartEl.innerHTML = `<rect width="${W}" height="${H}" fill="#0a1820"/>`;
+
+  // Axis labels
+  const ySteps = [0, 0.25, 0.5, 0.75, 1.0];
+  ySteps.forEach(f => {
+    const y = PAD.t + iH * (1 - f);
+    const val = Math.round(f * maxScore);
+    chartEl.innerHTML += `<line x1="${PAD.l}" y1="${y}" x2="${W-PAD.r}" y2="${y}" stroke="#1a3a50" stroke-width="0.5"/>
+      <text x="${PAD.l - 4}" y="${y + 3}" fill="#4a6a7a" font-size="7" text-anchor="end" font-family="monospace">${val}</text>`;
+  });
+
+  // X-axis label
+  chartEl.innerHTML += `<text x="${W/2}" y="${H - 4}" fill="#4a6a7a" font-size="7" text-anchor="middle" font-family="monospace">Turn</text>`;
+
+  const xOf = i => PAD.l + (i / (history.length - 1 || 1)) * iW;
+  const yOf = v => PAD.t + iH * (1 - Math.min(v / maxScore, 1));
+
+  // Red area
+  let redPts = `M${xOf(0)},${PAD.t + iH}`;
+  history.forEach((h, i) => { redPts += ` L${xOf(i)},${yOf(h.red_score || 0)}`; });
+  redPts += ` L${xOf(history.length-1)},${PAD.t + iH} Z`;
+  chartEl.innerHTML += `<path d="${redPts}" fill="#ff2d5511" stroke="none"/>`;
+
+  // Blue area
+  let bluePts = `M${xOf(0)},${PAD.t + iH}`;
+  history.forEach((h, i) => { bluePts += ` L${xOf(i)},${yOf(h.blue_score || 0)}`; });
+  bluePts += ` L${xOf(history.length-1)},${PAD.t + iH} Z`;
+  chartEl.innerHTML += `<path d="${bluePts}" fill="#00d4ff11" stroke="none"/>`;
+
+  // Red line
+  chartEl.innerHTML += `<polyline points="${history.map((h,i) => `${xOf(i)},${yOf(h.red_score||0)}`).join(' ')}"
+    fill="none" stroke="#ff2d55" stroke-width="1.5"/>`;
+
+  // Blue line
+  chartEl.innerHTML += `<polyline points="${history.map((h,i) => `${xOf(i)},${yOf(h.blue_score||0)}`).join(' ')}"
+    fill="none" stroke="#00d4ff" stroke-width="1.5"/>`;
+
+  // Live dots at current turn (updated via updateScores)
+  chartEl.innerHTML += `<circle id="chart-dot-red"  r="3" fill="#ff2d55" cx="${xOf(0)}" cy="${yOf(0)}"/>`;
+  chartEl.innerHTML += `<circle id="chart-dot-blue" r="3" fill="#00d4ff" cx="${xOf(0)}" cy="${yOf(0)}"/>`;
+}
+
+function updateScores(turn) {
+  const t = Math.min(turn - 1, GAME_DATA.history.length - 1);
+  let rScore = 0, bScore = 0;
+  if (t >= 0) {
+    rScore = GAME_DATA.history[t].red_score || 0;
+    bScore = GAME_DATA.history[t].blue_score || 0;
+  }
+  document.getElementById('score-red').textContent  = rScore.toFixed(1);
+  document.getElementById('score-blue').textContent = bScore.toFixed(1);
+
+  // Move dots on chart
+  if (GAME_DATA.history.length < 2) return;
+  const history = GAME_DATA.history;
+  const W = 302, H = 110, PAD = { t: 8, r: 10, b: 22, l: 28 };
+  const iW = W - PAD.l - PAD.r;
+  const iH = H - PAD.t - PAD.b;
+  const maxScore = Math.max(...history.map(h => Math.max(h.red_score||0, h.blue_score||0)), 1);
+  const idx = Math.max(0, Math.min(t, history.length - 1));
+  const xOf = i => PAD.l + (i / (history.length - 1 || 1)) * iW;
+  const yOf = v => PAD.t + iH * (1 - Math.min(v / maxScore, 1));
+  const dotR = document.getElementById('chart-dot-red');
+  const dotB = document.getElementById('chart-dot-blue');
+  if (dotR && t >= 0) { dotR.setAttribute('cx', xOf(idx)); dotR.setAttribute('cy', yOf(history[idx].red_score||0)); }
+  if (dotB && t >= 0) { dotB.setAttribute('cx', xOf(idx)); dotB.setAttribute('cy', yOf(history[idx].blue_score||0)); }
+}
+
+// ══════════════════════════════════════════════════════
+//  TURN MARKERS
+// ══════════════════════════════════════════════════════
+function buildTurnMarkers() {
+  const container = document.getElementById('turn-markers');
+  GAME_DATA.history.forEach((h, i) => {
+    const pct = GAME_DATA.total_turns > 0 ? ((i + 1) / GAME_DATA.total_turns) * 100 : 0;
+    const m = document.createElement('div');
+    m.className = 'turn-marker';
+    m.style.left = pct + '%';
+    if (h.red_status === 'success' && h.red_action_type === 'exfiltrate') m.classList.add('red-win');
+    container.appendChild(m);
+  });
+}
+
+// ══════════════════════════════════════════════════════
+//  ACTION LOG
+// ══════════════════════════════════════════════════════
+function buildActionLog() {
+  logEl.innerHTML = '';
+  GAME_DATA.history.forEach((h, i) => {
+    const entry = document.createElement('div');
+    entry.className = 'log-entry';
+    entry.dataset.turn = h.turn;
+
+    const rdelta = h.red_reward >= 0 ? `+${h.red_reward.toFixed(1)}` : h.red_reward.toFixed(1);
+    const bdelta = h.blue_reward >= 0 ? `+${h.blue_reward.toFixed(1)}` : h.blue_reward.toFixed(1);
+    const rdClass = h.red_reward >= 0 ? 'pos' : 'neg';
+    const bdClass = h.blue_reward >= 0 ? 'pos' : 'neg';
+
+    const alerts = (h.alerts || []).map(a => `<div class="log-alert">⚠ ${a}</div>`).join('');
+
+    entry.innerHTML = `
+      <div class="log-turn">TURN ${String(h.turn).padStart(2,'0')}</div>
+      <div><span class="log-red">⚔ ${h.red_action_type.toUpperCase()}</span>
+           <span style="color:var(--text-dim)"> → ${h.red_target||'—'}</span>
+           <span class="log-status-${h.red_status}" style="float:right">${h.red_status}</span></div>
+      <div class="log-msg">${h.red_msg || ''}</div>
+      <div class="log-delta ${rdClass}">RED Δ ${rdelta}  →  ${h.red_score.toFixed(1)}</div>
+      <div><span class="log-blue">🛡 ${h.blue_action_type.toUpperCase()}</span>
+           <span style="color:var(--text-dim)"> → ${h.blue_target||'—'}</span>
+           <span class="log-status-${h.blue_status}" style="float:right">${h.blue_status}</span></div>
+      <div class="log-msg">${h.blue_msg || ''}</div>
+      <div class="log-delta ${bdClass}">BLU Δ ${bdelta}  →  ${h.blue_score.toFixed(1)}</div>
+      ${alerts}`;
+
+    entry.addEventListener('click', () => { stopPlay(); setTurn(h.turn); });
+    logEl.appendChild(entry);
+  });
+}
+
+function highlightLogEntry(turn) {
+  document.querySelectorAll('.log-entry').forEach(e => {
+    const t = parseInt(e.dataset.turn);
+    e.classList.toggle('active', t === turn);
+  });
+  const active = logEl.querySelector('.log-entry.active');
+  if (active) active.scrollIntoView({ block: 'nearest' });
+}
+
+// ══════════════════════════════════════════════════════
+//  NODE GRID
+// ══════════════════════════════════════════════════════
+function buildNodeGrid() {
+  nodeGrid.innerHTML = '';
+  GAME_DATA.nodes.forEach(node => {
+    const chip = document.createElement('div');
+    chip.className = 'node-chip';
+    chip.id = 'chip-' + node.id;
+    chip.innerHTML = `
+      <div class="node-chip-alert"></div>
+      <div class="node-chip-name">${node.id}</div>
+      <div class="node-chip-owner neutral" id="chip-owner-${node.id}">—</div>
+      <div class="exfil-bar" id="chip-exfil-${node.id}" style="width:0%"></div>`;
+    chip.addEventListener('click', () => {
+      selectedNode = node.id;
+      buildIntel(currentTurn);
+      switchTab('intel');
+    });
+    nodeGrid.appendChild(chip);
+  });
+  updateNodeGrid(0);
+}
+
+function updateNodeGrid(turn) {
+  const snap = getSnapshot(turn);
+  GAME_DATA.nodes.forEach(node => {
+    const state = snap[node.id] || {};
+    const chip  = document.getElementById('chip-' + node.id);
+    const ownerEl = document.getElementById('chip-owner-' + node.id);
+    const exfilEl = document.getElementById('chip-exfil-' + node.id);
+    if (!chip) return;
+
+    chip.className = 'node-chip' +
+      (state.compromised ? ' compromised' : '') +
+      (state.isolated    ? ' isolated'    : '') +
+      (state.honeypot    ? ' honeypot'    : '') +
+      (state.alert_level > 0 ? ' alert-active' : '');
+
+    ownerEl.className = 'node-chip-owner ' + (state.owner || 'neutral');
+    ownerEl.textContent = state.compromised ? '⚠ COMP' : (state.owner || '—').toUpperCase();
+    exfilEl.style.width = Math.min((state.data_exfil || 0) * 100, 100) + '%';
+  });
+}
+
+// ══════════════════════════════════════════════════════
+//  INTEL PANE
+// ══════════════════════════════════════════════════════
+function buildIntel(turn) {
+  const snap = getSnapshot(turn);
+  const pane = intelPane;
+  pane.innerHTML = '';
+
+  // Game overview
+  const t = Math.min(turn - 1, GAME_DATA.history.length - 1);
+  const rScore = t >= 0 ? GAME_DATA.history[t].red_score : 0;
+  const bScore = t >= 0 ? GAME_DATA.history[t].blue_score : 0;
+
+  const gameGroup = document.createElement('div');
+  gameGroup.className = 'intel-group';
+  gameGroup.innerHTML = `<div class="intel-group-title">Game State</div>
+    ${irow('Scenario', GAME_DATA.scenario)}
+    ${irow('Turn', `${turn} / ${GAME_DATA.total_turns}`)}
+    ${irow('Red Score', rScore.toFixed(1), 'red')}
+    ${irow('Blue Score', bScore.toFixed(1), 'blue')}
+    ${irow('Winner', GAME_DATA.winner.toUpperCase(), GAME_DATA.winner)}`;
+  pane.appendChild(gameGroup);
+
+  // Selected node or network summary
+  if (selectedNode && snap[selectedNode]) {
+    const node = GAME_DATA.nodes.find(n => n.id === selectedNode);
+    const state = snap[selectedNode];
+    const nodeGroup = document.createElement('div');
+    nodeGroup.className = 'intel-group';
+    nodeGroup.innerHTML = `<div class="intel-group-title">Node: ${selectedNode}</div>
+      ${irow('Label', node ? node.label : selectedNode)}
+      ${irow('Type', node ? node.type : '—')}
+      ${irow('Value', node ? node.value : '—', 'amber')}
+      ${irow('Owner', state.owner || '—', state.owner)}
+      ${irow('Compromised', state.compromised ? 'YES' : 'no', state.compromised ? 'red' : 'green')}
+      ${irow('Isolated', state.isolated ? 'YES' : 'no')}
+      ${irow('Alert Lv', state.alert_level || 0)}
+      ${irow('Patch Lv', state.patch_level || 0)}
+      ${irow('Exfil', ((state.data_exfil||0)*100).toFixed(0) + '%', state.data_exfil > 0 ? 'red' : '')}`;
+
+    if (node && node.vulnerabilities && node.vulnerabilities.length) {
+      const vulns = node.vulnerabilities.map(v =>
+        `<span class="vuln-chip">${v.cve} (${v.cvss})</span>`).join('');
+      nodeGroup.innerHTML += `<div class="intel-row"><span class="intel-key">CVEs</span>
+        <span class="intel-val" style="text-align:right">${vulns}</span></div>`;
+    }
+    pane.appendChild(nodeGroup);
+  } else {
+    // Network summary
+    const nodes = Object.entries(snap);
+    const compromised = nodes.filter(([,s]) => s.compromised).length;
+    const blue = nodes.filter(([,s]) => s.owner === 'blue').length;
+    const isolated = nodes.filter(([,s]) => s.isolated).length;
+    const totalExfil = nodes.reduce((a, [,s]) => a + s.data_exfil, 0);
+
+    const netGroup = document.createElement('div');
+    netGroup.className = 'intel-group';
+    netGroup.innerHTML = `<div class="intel-group-title">Network Status</div>
+      ${irow('Total Nodes', GAME_DATA.nodes.length)}
+      ${irow('Compromised', compromised, compromised > 0 ? 'red' : 'green')}
+      ${irow('Blue-owned', blue, 'blue')}
+      ${irow('Isolated', isolated)}
+      ${irow('Total Exfil', (totalExfil * 100).toFixed(1) + '%', totalExfil > 0 ? 'red' : '')}`;
+    pane.appendChild(netGroup);
+
+    const hint = document.createElement('div');
+    hint.style.cssText = 'font-size:9px;color:var(--text-dim);padding:8px;text-align:center';
+    hint.textContent = 'Click a node in the graph or grid for details';
+    pane.appendChild(hint);
+  }
+}
+
+function irow(k, v, cls='') {
+  return `<div class="intel-row"><span class="intel-key">${k}</span><span class="intel-val ${cls}">${v}</span></div>`;
+}
+
+// ══════════════════════════════════════════════════════
+//  BATTLE SUMMARY
+// ══════════════════════════════════════════════════════
+function buildSummary() {
+  const lastH = GAME_DATA.history[GAME_DATA.history.length - 1] || {};
+  const winner = GAME_DATA.winner || 'blue';
+
+  document.getElementById('sum-winner-title').textContent = winner.toUpperCase() + ' TEAM WINS';
+  document.getElementById('sum-winner-title').className = 'summary-title ' + winner;
+  document.getElementById('sum-subtitle').textContent = GAME_DATA.scenario + '  ·  ' + GAME_DATA.total_turns + ' turns';
+
+  document.getElementById('sum-turns').textContent = GAME_DATA.total_turns;
+  document.getElementById('sum-winner').textContent = winner.toUpperCase();
+  document.getElementById('sum-red-score').textContent = (lastH.red_score || 0).toFixed(1);
+  document.getElementById('sum-blue-score').textContent = (lastH.blue_score || 0).toFixed(1);
+
+  // Count compromised at end
+  if (GAME_DATA.snapshots.length) {
+    const lastSnap = GAME_DATA.snapshots[GAME_DATA.snapshots.length - 1];
+    const nodes = Object.values(lastSnap);
+    const comp = nodes.filter(n => n.compromised).length;
+    const exfil = nodes.reduce((a, n) => a + n.data_exfil, 0);
+    document.getElementById('sum-compromised').textContent = comp + ' / ' + nodes.length;
+    document.getElementById('sum-exfil').textContent = (exfil * 100).toFixed(1) + '%';
+  }
+
+  // Key events
+  const events = [];
+  GAME_DATA.history.forEach(h => {
+    if (h.red_status === 'success' && h.red_action_type === 'exploit')
+      events.push(`<div class="summary-event"><span class="event-turn">T${h.turn}</span> ⚔ Red exploited <b>${h.red_target}</b></div>`);
+    if (h.red_status === 'success' && h.red_action_type === 'exfiltrate')
+      events.push(`<div class="summary-event"><span class="event-turn">T${h.turn}</span> ⚔ Red exfiltrated from <b>${h.red_target}</b></div>`);
+    if (h.blue_status === 'success' && h.blue_action_type === 'patch')
+      events.push(`<div class="summary-event"><span class="event-turn">T${h.turn}</span> 🛡 Blue patched <b>${h.blue_target}</b></div>`);
+    if ((h.alerts || []).length > 0)
+      events.push(`<div class="summary-event"><span class="event-turn">T${h.turn}</span> ⚠ ${h.alerts.length} alert(s)</div>`);
+  });
+  document.getElementById('sum-events').innerHTML = events.slice(0, 10).join('') || '<div class="summary-event">No significant events recorded</div>';
+}
+
+function showSummary() {
+  document.getElementById('summary-overlay').classList.add('visible');
+}
+function hideSummary() {
+  document.getElementById('summary-overlay').classList.remove('visible');
+}
+
+// ══════════════════════════════════════════════════════
+//  BOOT
+// ══════════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
