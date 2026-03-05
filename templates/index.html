@@ -987,6 +987,17 @@ function showScreen(id) {
 
 function goSetup() {
   stopPlay();
+  // Reset live game state
+  LV.sessionId = null;
+  LV.done      = false;
+  LV.actions   = [];
+  LV.selAction = null;
+  LV.selTarget = null;
+  LV.selCve    = null;
+  // Always re-enable launch button in case it was left disabled
+  document.getElementById('run-btn').disabled = false;
+  document.getElementById('dl-btn').disabled  = false;
+  document.getElementById('error-msg').textContent = '';
   showScreen('screen-setup');
 }
 
@@ -1855,41 +1866,50 @@ function selectAction(action, btnEl) {
   targetLbl.textContent = action.needs_from ? 'Select Pivot (From → To)' : 'Select Target Node';
 
   const targetGrid = document.getElementById('lv-target-grid');
+
+  function selectChip(chip, t) {
+    document.querySelectorAll('#lv-target-grid .target-chip').forEach(c => c.classList.remove('selected'));
+    chip.classList.add('selected');
+    LV.selTarget = t;
+    LV.selCve    = null;
+    // Show CVE selector if needed
+    if (action.needs_cve && action.cve_options && action.cve_options.length) {
+      const cveGrid = document.getElementById('lv-cve-grid');
+      cveGrid.innerHTML = '';
+      action.cve_options.forEach(cve => {
+        const cc = document.createElement('div');
+        cc.className = 'target-chip';
+        cc.textContent = cve;
+        cc.addEventListener('click', () => {
+          document.querySelectorAll('#lv-cve-grid .target-chip').forEach(x => x.classList.remove('selected'));
+          cc.classList.add('selected');
+          LV.selCve = cve;
+          checkSubmitReady();
+        });
+        cveGrid.appendChild(cc);
+      });
+      document.getElementById('lv-cve-sel').classList.add('visible');
+    }
+    checkSubmitReady();
+  }
+
   targets.forEach(t => {
     const chip = document.createElement('div');
     chip.className = 'target-chip';
     chip.textContent = t.label || t.node;
-    chip.addEventListener('click', () => {
-      document.querySelectorAll('#lv-target-grid .target-chip').forEach(c => c.classList.remove('selected'));
-      chip.classList.add('selected');
-      LV.selTarget = t;
-      LV.selCve    = null;
-      // Show CVE selector if needed
-      if (action.needs_cve && action.cve_options && action.cve_options.length) {
-        const cveGrid = document.getElementById('lv-cve-grid');
-        cveGrid.innerHTML = '';
-        action.cve_options.forEach(cve => {
-          const cc = document.createElement('div');
-          cc.className = 'target-chip';
-          cc.textContent = cve;
-          cc.addEventListener('click', () => {
-            document.querySelectorAll('#lv-cve-grid .target-chip').forEach(x => x.classList.remove('selected'));
-            cc.classList.add('selected');
-            LV.selCve = cve;
-            checkSubmitReady();
-          });
-          cveGrid.appendChild(cc);
-        });
-        document.getElementById('lv-cve-sel').classList.add('visible');
-      }
-      checkSubmitReady();
-    });
+    chip.addEventListener('click', () => selectChip(chip, t));
     targetGrid.appendChild(chip);
     // Highlight node on map
     chip.addEventListener('mouseenter', () => lvDrawNetwork(t.node));
     chip.addEventListener('mouseleave', () => lvDrawNetwork(null));
   });
   document.getElementById('lv-target-sel').classList.add('visible');
+
+  // Auto-select if only one target option
+  if (targets.length === 1) {
+    const onlyChip = targetGrid.firstChild;
+    if (onlyChip) selectChip(onlyChip, targets[0]);
+  }
 
   checkSubmitReady();
 }
