@@ -32,12 +32,17 @@ a = Analysis(
     datas=[
         (str(HERE / 'templates'),                 'templates'),
         (str(HERE / 'cyberwar_ui_template.html'),  '.'),
-        (str(HERE / 'env'),                        'env'),
-        (str(HERE / 'engine'),                     'engine'),
-        (str(HERE / 'agents'),                     'agents'),
-        (str(HERE / 'scenarios'),                  'scenarios'),
-        (str(HERE / 'rl'),                         'rl'),
-    ],
+    ] + (
+        [(str(HERE / 'env'),      'env')]      if (HERE / 'env').exists()      else []
+    ) + (
+        [(str(HERE / 'engine'),   'engine')]   if (HERE / 'engine').exists()   else []
+    ) + (
+        [(str(HERE / 'agents'),   'agents')]   if (HERE / 'agents').exists()   else []
+    ) + (
+        [(str(HERE / 'scenarios'),'scenarios')]if (HERE / 'scenarios').exists()else []
+    ) + (
+        [(str(HERE / 'rl'),       'rl')]       if (HERE / 'rl').exists()       else []
+    ),
     hiddenimports=[
         'flask',
         'flask.templating',
