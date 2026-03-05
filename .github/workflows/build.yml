@@ -1,7 +1,11 @@
 name: Build CyberWar
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*.*.*'
 
 permissions:
   contents: write
@@ -27,6 +31,7 @@ jobs:
         with:
           name: CyberWarSandbox_Mac
           path: dist/CyberWarSandbox_Mac.zip
+          retention-days: 30
 
   build-windows:
     runs-on: windows-latest
@@ -43,3 +48,27 @@ jobs:
         with:
           name: CyberWarSandbox_Windows
           path: dist\CyberWarSandbox_Windows.zip
+          retention-days: 30
+
+  release:
+    needs: [build-mac, build-windows]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: CyberWarSandbox_Mac
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: CyberWarSandbox_Windows
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          name: CyberWar Sandbox ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          files: |
+            CyberWarSandbox_Mac.zip
+            CyberWarSandbox_Windows.zip
