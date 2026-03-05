@@ -15,7 +15,7 @@ Go to the [Releases page](../../releases) and download the latest version for yo
 | macOS | `CyberWarSandbox_Mac.zip` | macOS 11+ |
 | Windows | `CyberWarSandbox_Windows.zip` | Windows 10+ |
 
-**Mac:** Unzip → double-click `CyberWarSandbox.app`. If macOS blocks it, right-click → Open.
+**Mac:** Unzip → right-click `CyberWarSandbox.app` → Open (required first time to bypass Gatekeeper). Or go to **System Settings → Privacy & Security → Open Anyway** after attempting to launch.
 
 **Windows:** Unzip → run `CyberWarSandbox.exe`. The app opens your browser automatically.
 
@@ -26,8 +26,9 @@ Go to the [Releases page](../../releases) and download the latest version for yo
 - **Human player mode** — play as Red team against AI defenders
 - **Live game UI** — interactive browser-based interface for human turns
 - **Desktop app** — runs as a Mac .app or Windows .exe, no Python required
-- **Battle replay** — watch AI vs AI games as animated replays
+- **Battle replay** — watch AI vs AI games as animated network graph replays
 - **Fog of war** — Red only sees nodes it has discovered; Blue sees everything
+- **Custom app icon** — shield with circuit/network pattern
 
 ---
 
@@ -84,7 +85,7 @@ CyberWar-Agentic-Sandbox/
 │   ├── actions.py          # ActionType enum, Action dataclass, ActionResolver
 │   └── observation.py      # Partial observability — Red/Blue see different things
 ├── scenarios/
-│   └── __init__.py         # Pre-built topologies: corporate, ICS/OT, cloud
+│   └── scenarios.py        # Pre-built topologies: corporate, ICS/OT, cloud, govdef
 ├── rl/
 │   └── ppo_agent.py        # PPO reinforcement learning agent
 └── cyberwar.spec           # PyInstaller build spec
@@ -100,10 +101,10 @@ Select a scenario and agent types, then watch the battle play out as an animated
 ### Play (Human vs AI)
 Take control of the Red team. On each turn you see:
 - Your discovered network (fog of war — unknown nodes are hidden)
-- Available actions and targets
+- Available actions and valid targets
 - Outcome of your last action
 
-Blue AI defends automatically each turn.
+Select an action, then select a target node if required — the Submit button enables automatically once your selection is complete. Blue AI defends each turn.
 
 ---
 
@@ -142,6 +143,7 @@ Blue AI defends automatically each turn.
 | `corporate` | 9 | Classic DMZ → internal pivot → Active Directory |
 | `ics` | 7 | IT/OT convergence — HMI → PLC attack path |
 | `cloud` | 7 | API Gateway → Lambda → RDS/S3/IAM |
+| `govdef` | — | Government defence network |
 
 ---
 
@@ -207,10 +209,18 @@ build_win.bat
 REM Output: dist\CyberWarSandbox\CyberWarSandbox.exe
 ```
 
-Builds are also automated via GitHub Actions — push a version tag to trigger:
+### Automated builds via GitHub Actions
+
+Every push to `main` automatically builds both Mac and Windows packages. Download the zips from the **Actions** tab → latest run → **Artifacts**.
+
+To create a public release with download links:
+
 ```bash
-git tag v2.0.1 && git push origin v2.0.1
+git tag v2.0.1
+git push origin v2.0.1
 ```
+
+Or create a tag through the GitHub web UI under **Releases → Draft a new release**.
 
 ---
 
